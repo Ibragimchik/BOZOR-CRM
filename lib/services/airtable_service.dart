@@ -87,4 +87,11 @@ class AirtableService {
     final response = await http.post(url, headers: _headers, body: body);
     return response.statusCode == 200 || response.statusCode == 201;
   }
+
+  // Qarzni o'chirish / yopish
+  Future<bool> deleteQarzdor(String recordId) async {
+    final url = Uri.parse('$_baseUrl/$_baseId/Qarzdorlar/$recordId');
+    final response = await http.delete(url, headers: _headers);
+    return response.statusCode == 200;
+  }
 }

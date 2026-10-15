@@ -105,13 +105,10 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
     final xaridorController = TextEditingController();
     final soniController = TextEditingController(text: '1');
     
-    // Ombordagi tovarlarni olamiz
     List<Map<String, dynamic>> tovarlar = [];
     try {
       tovarlar = await _airtableService.getTovarlar();
-    } catch (e) {
-      // Xatolik bo'lsa bo'sh qoladi
-    }
+    } catch (_) {}
 
     Map<String, dynamic>? tanlanganTovar;
 
@@ -194,7 +191,6 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
 
                       final success = await _airtableService.addSotuv(sotuvFields);
                       if (success) {
-                        // Ombordagi sonini kamaytiramiz
                         await _airtableService.updateTovarSoni(tovarId, joriySoni - sotilganSoni);
                         
                         if (mounted) {
@@ -277,7 +273,7 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
   }
 }
 
-// ================= 2. OMBOR / TOVARLAR EKRANI =================
+// ================= 2. OMBOR / TOVARLAR EKRANI (Qidiruv bilan) =================
 class OmborScreen extends StatefulWidget {
   const OmborScreen({super.key});
 
@@ -287,17 +283,45 @@ class OmborScreen extends StatefulWidget {
 
 class _OmborScreenState extends State<OmborScreen> {
   final AirtableService _airtableService = AirtableService();
-  late Future<List<Map<String, dynamic>>> _tovarlarFuture;
+  List<Map<String, dynamic>> _tovarlar = [];
+  List<Map<String, dynamic>> _filteredTovarlar = [];
+  bool _isLoading = true;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _refreshTovarlar();
+    _loadTovarlar();
+    _searchController.addListener(_filterTovarlar);
   }
 
-  void _refreshTovarlar() {
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadTovarlar() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await _airtableService.getTovarlar();
+      setState(() {
+        _tovarlar = data;
+        _filteredTovarlar = data;
+        _isLoading = false;
+      });
+    } catch (_) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _filterTovarlar() {
+    final query = _searchController.text.toLowerCase();
     setState(() {
-      _tovarlarFuture = _airtableService.getTovarlar();
+      _filteredTovarlar = _tovarlar.where((tovar) {
+        final nomi = (tovar['fields']['Nomi'] ?? '').toString().toLowerCase();
+        return nomi.contains(query);
+      }).toList();
     });
   }
 
@@ -348,7 +372,7 @@ class _OmborScreenState extends State<OmborScreen> {
                   if (mounted) {
                     Navigator.pop(context);
                     if (success) {
-                      _refreshTovarlar();
+                      _loadTovarlar();
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Tovar omborga qo\'shildi!')),
                       );
@@ -374,48 +398,56 @@ class _OmborScreenState extends State<OmborScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _refreshTovarlar,
+            onPressed: _loadTovarlar,
           ),
         ],
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _tovarlarFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Xatolik: ${snapshot.error}'));
-          }
-
-          final tovarlar = snapshot.data ?? [];
-          if (tovarlar.isEmpty) {
-            return const Center(child: Text('Omborda tovar yo\'q'));
-          }
-
-          return ListView.builder(
-            itemCount: tovarlar.length,
-            padding: const EdgeInsets.all(12),
-            itemBuilder: (context, index) {
-              final fields = tovarlar[index]['fields'] ?? {};
-              final soni = fields['Soni'] ?? 0;
-
-              return Card(
-                elevation: 2,
-                margin: const EdgeInsets.symmetric(vertical: 6),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.blueGrey,
-                    child: Text('$soni', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  ),
-                  title: Text(fields['Nomi'] ?? 'Noma\'lum', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('Omborda: $soni shtuk'),
-                  trailing: Text('\$${fields['Narxi'] ?? 0}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                labelText: 'Tovarni qidirish...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
-              );
-            },
-          );
-        },
+                filled: true,
+                fillColor: Colors.grey[100],
+              ),
+            ),
+          ),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _filteredTovarlar.isEmpty
+                    ? const Center(child: Text('Tovar topilmadi'))
+                    : ListView.builder(
+                        itemCount: _filteredTovarlar.length,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        itemBuilder: (context, index) {
+                          final fields = _filteredTovarlar[index]['fields'] ?? {};
+                          final soni = fields['Soni'] ?? 0;
+
+                          return Card(
+                            elevation: 2,
+                            margin: const EdgeInsets.symmetric(vertical: 6),
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: Colors.blueGrey,
+                                child: Text('$soni', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              ),
+                              title: Text(fields['Nomi'] ?? 'Noma\'lum', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              subtitle: Text('Omborda: $soni shtuk'),
+                              trailing: Text('\$${fields['Narxi'] ?? 0}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                            ),
+                          );
+                        },
+                      ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddTovarDialog,
@@ -426,7 +458,7 @@ class _OmborScreenState extends State<OmborScreen> {
   }
 }
 
-// ================= 3. QARZDORLAR EKRANI =================
+// ================= 3. QARZDORLAR EKRANI (Qarzni yopish bilan) =================
 class QarzdorlarScreen extends StatefulWidget {
   const QarzdorlarScreen({super.key});
 
@@ -512,6 +544,40 @@ class _QarzdorlarScreenState extends State<QarzdorlarScreen> {
     );
   }
 
+  void _confirmDeleteQarz(String recordId, String mijoz) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Qarzni yopish'),
+          content: Text('$mijoz ning qarzini to\'landi deb yopamizmi?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Yo\'q'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+              onPressed: () async {
+                final success = await _airtableService.deleteQarzdor(recordId);
+                if (mounted) {
+                  Navigator.pop(context);
+                  if (success) {
+                    _refreshQarzdorlar();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Qarz muvaffaqiyatli yopildi!')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Ha, yopish'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -545,7 +611,10 @@ class _QarzdorlarScreenState extends State<QarzdorlarScreen> {
             itemCount: qarzdorlar.length,
             padding: const EdgeInsets.all(12),
             itemBuilder: (context, index) {
-              final fields = qarzdorlar[index]['fields'] ?? {};
+              final item = qarzdorlar[index];
+              final fields = item['fields'] ?? {};
+              final recordId = item['id'];
+              final mijoz = fields['Mijoz'] ?? 'Noma\'lum mijoz';
 
               return Card(
                 elevation: 2,
@@ -555,9 +624,23 @@ class _QarzdorlarScreenState extends State<QarzdorlarScreen> {
                     backgroundColor: Colors.deepOrange,
                     child: Icon(Icons.person, color: Colors.white),
                   ),
-                  title: Text(fields['Mijoz'] ?? 'Noma\'lum mijoz', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  title: Text(mijoz, style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text('Izoh: ${fields['Izoh'] ?? 'Yo\'q'}'),
-                  trailing: Text('\$${fields['QarzSummasi'] ?? 0}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.deepOrange)),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '\$${fields['QarzSummasi'] ?? 0}',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.deepOrange),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.check_circle_outline, color: Colors.green),
+                        onPressed: () => _confirmDeleteQarz(recordId, mijoz),
+                        tooltip: 'Qarzni yopish',
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -624,7 +707,7 @@ class _HisobotScreenState extends State<HisobotScreen> {
         _tovarlarSoni = tSoni;
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (_) {
       setState(() => _isLoading = false);
     }
   }
