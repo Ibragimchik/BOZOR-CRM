@@ -75,7 +75,6 @@ final Map<String, Map<String, String>> _localizedValues = {
     'close_debt': 'Карызды жабуу',
     'download_csv': 'Сатуу отчетун CSV түрүндө жүктөө',
     'print_receipt': 'Чек / Накладная чыгаруу',
-    'Чыгуу': 'Чыгуу',
     'logout': 'Чыгуу',
   },
 };
@@ -107,7 +106,7 @@ class BozorCrmApp extends StatelessWidget {
   }
 }
 
-// ================= 1. AUTENTIFIKATSIYA TEKSHIRUVCHISI =================
+// ================= 1. AUTENTIFIKATSIYA VA OBUNA TEKSHIRUVCHISI =================
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
@@ -119,6 +118,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   bool _isLoading = true;
   bool _isLoggedIn = false;
   bool _hasAccount = false;
+  bool _isSubscriptionExpired = false;
 
   @override
   void initState() {
@@ -130,10 +130,22 @@ class _AuthWrapperState extends State<AuthWrapper> {
     final prefs = await SharedPreferences.getInstance();
     final email = prefs.getString('user_email');
     final pin = prefs.getString('user_pin');
+    final trialExpiryStr = prefs.getString('trial_expiry');
+
+    bool expired = false;
+    if (trialExpiryStr != null) {
+      try {
+        final expiryDate = DateTime.parse(trialExpiryStr);
+        if (DateTime.now().isAfter(expiryDate)) {
+          expired = true; // 14 kunlik muddat tugagan
+        }
+      } catch (_) {}
+    }
 
     setState(() {
       _hasAccount = email != null;
-      _isLoggedIn = pin != null; 
+      _isLoggedIn = pin != null;
+      _isSubscriptionExpired = expired;
       _isLoading = false;
     });
   }
@@ -148,6 +160,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
     if (!_hasAccount) {
       return const RegisterScreen();
+    } else if (_isSubscriptionExpired) {
+      return const SubscriptionExpiredScreen();
     } else if (!_isLoggedIn) {
       return const PinLoginScreen();
     } else {
@@ -156,7 +170,53 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 }
 
-// ================= 2. RO'YXATDAN O'TISH EKRANI (Sign Up) =================
+// ================= 2. OBUNA MUDDATI TUGAGANLIK EKRANI =================
+class SubscriptionExpiredScreen extends StatelessWidget {
+  const SubscriptionExpiredScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.warning_amber_rounded, size: 80, color: Colors.orange),
+              const SizedBox(height: 16),
+              const Text(
+                'Sinov muddati tugadi!',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Ilovadan foydalanishni davom ettirish uchun obunani yangilang yoki administrator bilan bog\'laning.',
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white).let(
+                (style) => ElevatedButton(
+                  style: style,
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Obunani uzaytirish uchun administratorga murojaat qiling.')),
+                    );
+                  },
+                  child: const Text('Obunani yangilash'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ================= 3. RO'YXATDAN O'TISH EKRANI (Sign Up) =================
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -213,6 +273,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     await prefs.setString('user_pin', _pinController.text);
     await prefs.setString('bot_token', _botTokenController.text);
     
+    // 14 kunlik sinov muddatini belgilash
     final trialExpiry = DateTime.now().add(const Duration(days: 14)).toIso8601String();
     await prefs.setString('trial_expiry', trialExpiry);
 
@@ -290,7 +351,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 }
 
-// ================= 3. 4 XONALI PIN-KOD BILAN KIRISH EKRANI =================
+// ================= 4. 4 XONALI PIN-KOD BILAN KIRISH EKRANI =================
 class PinLoginScreen extends StatefulWidget {
   const PinLoginScreen({super.key});
 
@@ -358,7 +419,7 @@ class _PinLoginScreenState extends State<PinLoginScreen> {
   }
 }
 
-// ================= 4. ASOSIY NAVIGATSIYA EKRANI =================
+// ================= 5. ASOSIY NAVIGATSIYA EKRANI =================
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
 
@@ -440,7 +501,7 @@ Future<void> logoutUser(BuildContext context) async {
   }
 }
 
-// ================= 5. SOTUVLAR EKRANI (Printer / Nakladnoy tugmasi bilan) =================
+// ================= 6. SOTUVLAR EKRANI =================
 class SotuvlarScreen extends StatefulWidget {
   const SotuvlarScreen({super.key});
 
@@ -464,7 +525,6 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
     });
   }
 
-  // Chek yoki Nakladnoy chiqarish oynasini ochish
   void _printReceiptDialog(String mahsulot, double summa, String xaridor, String sana) async {
     final prefs = await SharedPreferences.getInstance();
     final storeName = prefs.getString('store_name') ?? 'Bozor CRM';
@@ -717,7 +777,7 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
   }
 }
 
-// ================= 6. OMBOR EKRANI =================
+// ================= 7. OMBOR EKRANI =================
 class OmborScreen extends StatefulWidget {
   const OmborScreen({super.key});
 
@@ -961,7 +1021,7 @@ class _OmborScreenState extends State<OmborScreen> {
   }
 }
 
-// ================= 7. QARZDORLAR EKRANI =================
+// ================= 8. QARZDORLAR EKRANI =================
 class QarzdorlarScreen extends StatefulWidget {
   const QarzdorlarScreen({super.key});
 
@@ -1124,7 +1184,7 @@ class _QarzdorlarScreenState extends State<QarzdorlarScreen> {
   }
 }
 
-// ================= 8. HISOBOTLAR EKRANI =================
+// ================= 9. HISOBOTLAR EKRANI =================
 class HisobotScreen extends StatefulWidget {
   const HisobotScreen({super.key});
 
