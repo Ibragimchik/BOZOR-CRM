@@ -137,7 +137,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
       try {
         final expiryDate = DateTime.parse(trialExpiryStr);
         if (DateTime.now().isAfter(expiryDate)) {
-          expired = true; // 14 kunlik muddat tugagan
+          expired = true;
         }
       } catch (_) {}
     }
@@ -197,16 +197,14 @@ class SubscriptionExpiredScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
-              ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white).let(
-                (style) => ElevatedButton(
-                  style: style,
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Obunani uzaytirish uchun administratorga murojaat qiling.')),
-                    );
-                  },
-                  child: const Text('Obunani yangilash'),
-                ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Obunani uzaytirish uchun administratorga murojaat qiling.')),
+                  );
+                },
+                child: const Text('Obunani yangilash'),
               ),
             ],
           ),
@@ -272,8 +270,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     await prefs.setString('user_email', _emailController.text);
     await prefs.setString('user_pin', _pinController.text);
     await prefs.setString('bot_token', _botTokenController.text);
+    await prefs.setString('user_role', 'admin'); // Birinchi ro'yxatdan o'tgan shaxs - Admin
     
-    // 14 kunlik sinov muddatini belgilash
     final trialExpiry = DateTime.now().add(const Duration(days: 14)).toIso8601String();
     await prefs.setString('trial_expiry', trialExpiry);
 
@@ -419,7 +417,7 @@ class _PinLoginScreenState extends State<PinLoginScreen> {
   }
 }
 
-// ================= 5. ASOSIY NAVIGATSIYA EKRANI =================
+// ================= 5. ASOSIY NAVIGATSIYA EKRANI (Rollar bo'yicha) =================
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
 
@@ -429,47 +427,50 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
+  String _userRole = 'admin';
 
-  final List<Widget> _screens = const [
-    SotuvlarScreen(),
-    OmborScreen(),
-    QarzdorlarScreen(),
-    HisobotScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadRole();
+  }
+
+  Future<void> _loadRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _userRole = prefs.getString('user_role') ?? 'admin';
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Agar foydalanuvchi sotuvchi (seller) bo'lsa, faqat Sotuvlar va Ombor ko'rinadi
+    final bool isAdmin = _userRole == 'admin';
+
+    final List<Widget> screens = isAdmin
+        ? const [SotuvlarScreen(), OmborScreen(), QarzdorlarScreen(), HisobotScreen()]
+        : const [SotuvlarScreen(), OmborScreen()];
+
     return Scaffold(
-      body: _screens[_selectedIndex],
+      body: screens[_selectedIndex > screens.length - 1 ? 0 : _selectedIndex],
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
+        selectedIndex: _selectedIndex > screens.length - 1 ? 0 : _selectedIndex,
         onDestinationSelected: (index) {
           setState(() {
             _selectedIndex = index;
           });
         },
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.shopping_cart_outlined),
-            selectedIcon: const Icon(Icons.shopping_cart),
-            label: tr('sales'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.inventory_2_outlined),
-            selectedIcon: const Icon(Icons.inventory_2),
-            label: tr('warehouse'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.menu_book_outlined),
-            selectedIcon: const Icon(Icons.menu_book),
-            label: tr('debts'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.analytics_outlined),
-            selectedIcon: const Icon(Icons.analytics),
-            label: tr('reports'),
-          ),
-        ],
+        destinations: isAdmin
+            ? [
+                NavigationDestination(icon: const Icon(Icons.shopping_cart_outlined), selectedIcon: const Icon(Icons.shopping_cart), label: tr('sales')),
+                NavigationDestination(icon: const Icon(Icons.inventory_2_outlined), selectedIcon: const Icon(Icons.inventory_2), label: tr('warehouse')),
+                NavigationDestination(icon: const Icon(Icons.menu_book_outlined), selectedIcon: const Icon(Icons.menu_book), label: tr('debts')),
+                NavigationDestination(icon: const Icon(Icons.analytics_outlined), selectedIcon: const Icon(Icons.analytics), label: tr('reports')),
+              ]
+            : [
+                NavigationDestination(icon: const Icon(Icons.shopping_cart_outlined), selectedIcon: const Icon(Icons.shopping_cart), label: tr('sales')),
+                NavigationDestination(icon: const Icon(Icons.inventory_2_outlined), selectedIcon: const Icon(Icons.inventory_2), label: tr('warehouse')),
+              ],
       ),
     );
   }
