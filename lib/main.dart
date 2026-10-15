@@ -273,7 +273,7 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
   }
 }
 
-// ================= 2. OMBOR / TOVARLAR EKRANI (Qidiruv bilan) =================
+// ================= 2. OMBOR / TOVARLAR EKRANI (Tahrirlash va o'chirish bilan) =================
 class OmborScreen extends StatefulWidget {
   const OmborScreen({super.key});
 
@@ -388,6 +388,103 @@ class _OmborScreenState extends State<OmborScreen> {
     );
   }
 
+  void _showEditTovarDialog(Map<String, dynamic> tovar) {
+    final recordId = tovar['id'];
+    final fields = tovar['fields'] ?? {};
+    final nomiController = TextEditingController(text: fields['Nomi'] ?? '');
+    final narxiController = TextEditingController(text: (fields['Narxi'] ?? '').toString());
+    final soniController = TextEditingController(text: (fields['Soni'] ?? '').toString());
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Tovarni tahrirlash'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nomiController,
+                decoration: const InputDecoration(labelText: 'Tovar nomi'),
+              ),
+              TextField(
+                controller: narxiController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Sotish narxi (\$)'),
+              ),
+              TextField(
+                controller: soniController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Soni (shtuk)'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Bekor qilish'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final updatedFields = {
+                  'Nomi': nomiController.text,
+                  'Narxi': double.tryParse(narxiController.text) ?? 0,
+                  'Soni': int.tryParse(soniController.text) ?? 0,
+                };
+
+                final success = await _airtableService.updateTovar(recordId, updatedFields);
+                if (mounted) {
+                  Navigator.pop(context);
+                  if (success) {
+                    _loadTovarlar();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Tovar tahrirlandi!')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Saqlash'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _confirmDeleteTovar(String recordId, String nomi) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Tovarni o\'chirish'),
+          content: Text('"$nomi" ni ombordan o\'chirib tashlaymizmi?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Yo\'q'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+              onPressed: () async {
+                final success = await _airtableService.deleteTovar(recordId);
+                if (mounted) {
+                  Navigator.pop(context);
+                  if (success) {
+                    _loadTovarlar();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Tovar o\'chirildi!')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Ha, o\'chirish'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -428,7 +525,10 @@ class _OmborScreenState extends State<OmborScreen> {
                         itemCount: _filteredTovarlar.length,
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         itemBuilder: (context, index) {
-                          final fields = _filteredTovarlar[index]['fields'] ?? {};
+                          final item = _filteredTovarlar[index];
+                          final fields = item['fields'] ?? {};
+                          final recordId = item['id'];
+                          final nomi = fields['Nomi'] ?? 'Noma\'lum';
                           final soni = fields['Soni'] ?? 0;
 
                           return Card(
@@ -439,9 +539,24 @@ class _OmborScreenState extends State<OmborScreen> {
                                 backgroundColor: Colors.blueGrey,
                                 child: Text('$soni', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                               ),
-                              title: Text(fields['Nomi'] ?? 'Noma\'lum', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              title: Text(nomi, style: const TextStyle(fontWeight: FontWeight.bold)),
                               subtitle: Text('Omborda: $soni shtuk'),
-                              trailing: Text('\$${fields['Narxi'] ?? 0}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text('\$${fields['Narxi'] ?? 0}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                                  IconButton(
+                                    icon: const Icon(Icons.edit, color: Colors.blue),
+                                    onPressed: () => _showEditTovarDialog(item),
+                                    tooltip: 'Tahrirlash',
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, color: Colors.red),
+                                    onPressed: () => _confirmDeleteTovar(recordId, nomi),
+                                    tooltip: 'O\'chirish',
+                                  ),
+                                ],
+                              ),
                             ),
                           );
                         },
@@ -458,7 +573,7 @@ class _OmborScreenState extends State<OmborScreen> {
   }
 }
 
-// ================= 3. QARZDORLAR EKRANI (Qarzni yopish bilan) =================
+// ================= 3. QARZDORLAR EKRANI =================
 class QarzdorlarScreen extends StatefulWidget {
   const QarzdorlarScreen({super.key});
 
@@ -633,7 +748,7 @@ class _QarzdorlarScreenState extends State<QarzdorlarScreen> {
                         '\$${fields['QarzSummasi'] ?? 0}',
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.deepOrange),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 4),
                       IconButton(
                         icon: const Icon(Icons.check_circle_outline, color: Colors.green),
                         onPressed: () => _confirmDeleteQarz(recordId, mijoz),

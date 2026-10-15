@@ -55,7 +55,7 @@ class AirtableService {
     return response.statusCode == 200 || response.statusCode == 201;
   }
 
-  // Tovar sonini yangilash (kamaytirish uchun)
+  // Tovar sonini yangilash (sotuv qilinganda)
   Future<bool> updateTovarSoni(String recordId, int yangiSoni) async {
     final url = Uri.parse('$_baseUrl/$_baseId/Tovarlar/$recordId');
     final body = json.encode({
@@ -63,6 +63,22 @@ class AirtableService {
     });
 
     final response = await http.patch(url, headers: _headers, body: body);
+    return response.statusCode == 200;
+  }
+
+  // Tovarni to'liq tahrirlash (nomi, narxi, soni)
+  Future<bool> updateTovar(String recordId, Map<String, dynamic> fields) async {
+    final url = Uri.parse('$_baseUrl/$_baseId/Tovarlar/$recordId');
+    final body = json.encode({'fields': fields});
+
+    final response = await http.patch(url, headers: _headers, body: body);
+    return response.statusCode == 200;
+  }
+
+  // Tovarni o'chirish
+  Future<bool> deleteTovar(String recordId) async {
+    final url = Uri.parse('$_baseUrl/$_baseId/Tovarlar/$recordId');
+    final response = await http.delete(url, headers: _headers);
     return response.statusCode == 200;
   }
 
@@ -88,7 +104,6 @@ class AirtableService {
     return response.statusCode == 200 || response.statusCode == 201;
   }
 
-  // Qarzni o'chirish / yopish
   Future<bool> deleteQarzdor(String recordId) async {
     final url = Uri.parse('$_baseUrl/$_baseId/Qarzdorlar/$recordId');
     final response = await http.delete(url, headers: _headers);
