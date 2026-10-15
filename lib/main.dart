@@ -1,8 +1,84 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'services/airtable_service.dart';
+import 'package:intl/intl.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 
 void main() {
   runApp(const BozorCrmApp());
+}
+
+// Global til boshqaruvi uchun notifier
+final ValueNotifier<String> currentLanguageNotifier = ValueNotifier<String>('uz');
+
+// Lug'at bazasi (O'zbekcha, Ruscha, Qirg'izcha)
+final Map<String, Map<String, String>> _localizedValues = {
+  'uz': {
+    'sales': 'Sotuvlar',
+    'warehouse': 'Ombor',
+    'debts': 'Nasiya',
+    'reports': 'Hisobot',
+    'add_sale': 'Yangi sotuv qilish',
+    'select_product': 'Tovarni tanlang',
+    'quantity': 'Sotilayotgan soni (shtuk)',
+    'customer': 'Xaridor ismi',
+    'total': 'Jami summa',
+    'cancel': 'Bekor qilish',
+    'save': 'Saqlash',
+    'search': 'Tovarni qidirish...',
+    'add_product': 'Omborga yangi tovar qo\'shish',
+    'price': 'Sotish narxi (\$)',
+    'in_stock': 'Omborda',
+    'close_debt': 'Qarzni yopish',
+    'download_csv': 'Sotuvlar hisobotini CSV ga yuklab olish',
+    'language': 'Til / Язык',
+  },
+  'ru': {
+    'sales': 'Продажи',
+    'warehouse': 'Склад',
+    'debts': 'Долги',
+    'reports': 'Отчеты',
+    'add_sale': 'Новая продажа',
+    'select_product': 'Выберите товар',
+    'quantity': 'Количество (шт)',
+    'customer': 'Имя покупателя',
+    'total': 'Итоговая сумма',
+    'cancel': 'Отмена',
+    'save': 'Сохранить',
+    'search': 'Поиск товара...',
+    'add_product': 'Добавить товар на склад',
+    'price': 'Цена продажи (\$)',
+    'in_stock': 'На складе',
+    'close_debt': 'Закрыть долг',
+    'download_csv': 'Скачать отчет продаж в CSV',
+    'language': 'Язык / Til',
+  },
+  'kg': {
+    'sales': 'Сатуулар',
+    'warehouse': 'Кампа',
+    'debts': 'Насия',
+    'reports': 'Отчеттор',
+    'add_sale': 'Жаңы сатуу',
+    'select_product': 'Товарды тандаңыз',
+    'quantity': 'Саны (даана)',
+    'customer': 'Сатып алуучунун аты',
+    'total': 'Жалпы сумма',
+    'cancel': 'Жокко чыгаруу',
+    'save': 'Сактоо',
+    'search': 'Товарды издөө...',
+    'add_product': 'Кампага жаңы товар кошуу',
+    'price': 'Сатуу баасы (\$)',
+    'in_stock': 'Кампада',
+    'close_debt': 'Карызды жабуу',
+    'download_csv': 'Сатуу отчетун CSV түрүндө жүктөө',
+    'language': 'Тил / Language',
+  },
+};
+
+String tr(String key) {
+  final lang = currentLanguageNotifier.value;
+  return _localizedValues[lang]?[key] ?? _localizedValues['uz']![key]!;
 }
 
 class BozorCrmApp extends StatelessWidget {
@@ -10,14 +86,19 @@ class BozorCrmApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Bozor CRM',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-        useMaterial3: true,
-      ),
-      home: const MainNavigationScreen(),
+    return ValueListenableBuilder<String>(
+      valueListenable: currentLanguageNotifier,
+      builder: (context, lang, child) {
+        return MaterialApp(
+          title: 'Bozor CRM',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+            useMaterial3: true,
+          ),
+          home: const MainNavigationScreen(),
+        );
+      },
     );
   }
 }
@@ -50,31 +131,55 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             _selectedIndex = index;
           });
         },
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.shopping_cart_outlined),
-            selectedIcon: Icon(Icons.shopping_cart),
-            label: 'Sotuvlar',
+            icon: const Icon(Icons.shopping_cart_outlined),
+            selectedIcon: const Icon(Icons.shopping_cart),
+            label: tr('sales'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.inventory_2_outlined),
-            selectedIcon: Icon(Icons.inventory_2),
-            label: 'Ombor',
+            icon: const Icon(Icons.inventory_2_outlined),
+            selectedIcon: const Icon(Icons.inventory_2),
+            label: tr('warehouse'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.menu_book_outlined),
-            selectedIcon: Icon(Icons.menu_book),
-            label: 'Nasiya',
+            icon: const Icon(Icons.menu_book_outlined),
+            selectedIcon: const Icon(Icons.menu_book),
+            label: tr('debts'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.analytics_outlined),
-            selectedIcon: Icon(Icons.analytics),
-            label: 'Hisobot',
+            icon: const Icon(Icons.analytics_outlined),
+            selectedIcon: const Icon(Icons.analytics),
+            label: tr('reports'),
           ),
         ],
       ),
     );
   }
+}
+
+// Til tanlash tugmasi komponenti
+Widget buildLanguageSelector() {
+  return PopupMenuButton<String>(
+    icon: const Icon(Icons.language, color: Colors.white),
+    onSelected: (String langCode) {
+      currentLanguageNotifier.value = langCode;
+    },
+    itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+      const PopupMenuItem<String>(
+        value: 'uz',
+        child: Text('O\'zbekcha 🇺🇿'),
+      ),
+      const PopupMenuItem<String>(
+        value: 'ru',
+        child: Text('Русский 🇷🇺'),
+      ),
+      const PopupMenuItem<String>(
+        value: 'kg',
+        child: Text('Кыргызча 🇰🇬'),
+      ),
+    ],
+  );
 }
 
 // ================= 1. SOTUVLAR EKRANI =================
@@ -104,7 +209,7 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
   void _showAddSotuvDialog() async {
     final xaridorController = TextEditingController();
     final soniController = TextEditingController(text: '1');
-    
+
     List<Map<String, dynamic>> tovarlar = [];
     try {
       tovarlar = await _airtableService.getTovarlar();
@@ -127,12 +232,12 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
             }
 
             return AlertDialog(
-              title: const Text('Yangi sotuv qilish'),
+              title: Text(tr('add_sale')),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<Map<String, dynamic>>(
-                    decoration: const InputDecoration(labelText: 'Tovarni tanlang'),
+                    decoration: InputDecoration(labelText: tr('select_product')),
                     items: tovarlar.map((t) {
                       final fields = t['fields'] ?? {};
                       return DropdownMenuItem(
@@ -149,16 +254,16 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
                   TextField(
                     controller: soniController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Sotilayotgan soni (shtuk)'),
+                    decoration: InputDecoration(labelText: tr('quantity')),
                     onChanged: (_) => setDialogState(() {}),
                   ),
                   TextField(
                     controller: xaridorController,
-                    decoration: const InputDecoration(labelText: 'Xaridor ismi'),
+                    decoration: InputDecoration(labelText: tr('customer')),
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Jami summa: \$$hisoblanganSumma',
+                    '${tr('total')}: \$$hisoblanganSumma',
                     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
                   ),
                 ],
@@ -166,7 +271,7 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Bekor qilish'),
+                  child: Text(tr('cancel')),
                 ),
                 ElevatedButton(
                   onPressed: () async {
@@ -183,27 +288,30 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
                         return;
                       }
 
+                      final sanaStr = DateTime.now().toIso8601String();
+
                       final sotuvFields = {
                         'Mahsulot': fields['Nomi'],
                         'Summa': hisoblanganSumma,
                         'Xaridor': xaridorController.text,
+                        'Sana': sanaStr,
                       };
 
                       final success = await _airtableService.addSotuv(sotuvFields);
                       if (success) {
                         await _airtableService.updateTovarSoni(tovarId, joriySoni - sotilganSoni);
-                        
+
                         if (mounted) {
                           Navigator.pop(context);
                           _refreshSotuvlar();
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Sotuv saqlandi va ombor yangilandi!')),
+                            const SnackBar(content: Text('Sotuv saqlandi!')),
                           );
                         }
                       }
                     }
                   },
-                  child: const Text('Saqlash'),
+                  child: Text(tr('save')),
                 ),
               ],
             );
@@ -217,10 +325,11 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bozor CRM - Sotuvlar'),
+        title: Text('Bozor CRM - ${tr('sales')}'),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
         actions: [
+          buildLanguageSelector(),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _refreshSotuvlar,
@@ -247,6 +356,17 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
             padding: const EdgeInsets.all(12),
             itemBuilder: (context, index) {
               final fields = sotuvlar[index]['fields'] ?? {};
+              final sanaVal = fields['Sana'];
+              String sanaStr = '';
+              if (sanaVal != null) {
+                try {
+                  final dt = DateTime.parse(sanaVal);
+                  sanaStr = DateFormat('dd.MM.yyyy HH:mm').format(dt);
+                } catch (_) {
+                  sanaStr = sanaVal.toString();
+                }
+              }
+
               return Card(
                 elevation: 2,
                 margin: const EdgeInsets.symmetric(vertical: 6),
@@ -256,7 +376,8 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
                     child: Icon(Icons.shopping_bag, color: Colors.white),
                   ),
                   title: Text(fields['Mahsulot'] ?? 'Noma\'lum', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('Xaridor: ${fields['Xaridor'] ?? 'Ko\'rsatilmagan'}'),
+                  subtitle: Text('Xaridor: ${fields['Xaridor'] ?? 'Yo\'q'}\nVaqti: $sanaStr'),
+                  isThreeLine: true,
                   trailing: Text('\$${fields['Summa'] ?? 0}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green)),
                 ),
               );
@@ -273,7 +394,7 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
   }
 }
 
-// ================= 2. OMBOR / TOVARLAR EKRANI (Tahrirlash va o'chirish bilan) =================
+// ================= 2. OMBOR EKRANI =================
 class OmborScreen extends StatefulWidget {
   const OmborScreen({super.key});
 
@@ -334,7 +455,7 @@ class _OmborScreenState extends State<OmborScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Omborga yangi tovar qo\'shish'),
+          title: Text(tr('add_product')),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -345,19 +466,19 @@ class _OmborScreenState extends State<OmborScreen> {
               TextField(
                 controller: narxiController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Sotish narxi (\$)'),
+                decoration: InputDecoration(labelText: tr('price')),
               ),
               TextField(
                 controller: soniController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Soni (shtuk)'),
+                decoration: InputDecoration(labelText: tr('quantity')),
               ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Bekor qilish'),
+              child: Text(tr('cancel')),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -374,110 +495,13 @@ class _OmborScreenState extends State<OmborScreen> {
                     if (success) {
                       _loadTovarlar();
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Tovar omborga qo\'shildi!')),
+                        const SnackBar(content: Text('Tovar qo\'shildi!')),
                       );
                     }
                   }
                 }
               },
-              child: const Text('Saqlash'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showEditTovarDialog(Map<String, dynamic> tovar) {
-    final recordId = tovar['id'];
-    final fields = tovar['fields'] ?? {};
-    final nomiController = TextEditingController(text: fields['Nomi'] ?? '');
-    final narxiController = TextEditingController(text: (fields['Narxi'] ?? '').toString());
-    final soniController = TextEditingController(text: (fields['Soni'] ?? '').toString());
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Tovarni tahrirlash'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nomiController,
-                decoration: const InputDecoration(labelText: 'Tovar nomi'),
-              ),
-              TextField(
-                controller: narxiController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Sotish narxi (\$)'),
-              ),
-              TextField(
-                controller: soniController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Soni (shtuk)'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Bekor qilish'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final updatedFields = {
-                  'Nomi': nomiController.text,
-                  'Narxi': double.tryParse(narxiController.text) ?? 0,
-                  'Soni': int.tryParse(soniController.text) ?? 0,
-                };
-
-                final success = await _airtableService.updateTovar(recordId, updatedFields);
-                if (mounted) {
-                  Navigator.pop(context);
-                  if (success) {
-                    _loadTovarlar();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Tovar tahrirlandi!')),
-                    );
-                  }
-                }
-              },
-              child: const Text('Saqlash'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _confirmDeleteTovar(String recordId, String nomi) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Tovarni o\'chirish'),
-          content: Text('"$nomi" ni ombordan o\'chirib tashlaymizmi?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Yo\'q'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-              onPressed: () async {
-                final success = await _airtableService.deleteTovar(recordId);
-                if (mounted) {
-                  Navigator.pop(context);
-                  if (success) {
-                    _loadTovarlar();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Tovar o\'chirildi!')),
-                    );
-                  }
-                }
-              },
-              child: const Text('Ha, o\'chirish'),
+              child: Text(tr('save')),
             ),
           ],
         );
@@ -489,10 +513,11 @@ class _OmborScreenState extends State<OmborScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ombor va Tovarlar'),
+        title: Text(tr('warehouse')),
         backgroundColor: Colors.blueGrey,
         foregroundColor: Colors.white,
         actions: [
+          buildLanguageSelector(),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadTovarlar,
@@ -506,7 +531,7 @@ class _OmborScreenState extends State<OmborScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                labelText: 'Tovarni qidirish...',
+                labelText: tr('search'),
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -527,7 +552,6 @@ class _OmborScreenState extends State<OmborScreen> {
                         itemBuilder: (context, index) {
                           final item = _filteredTovarlar[index];
                           final fields = item['fields'] ?? {};
-                          final recordId = item['id'];
                           final nomi = fields['Nomi'] ?? 'Noma\'lum';
                           final soni = fields['Soni'] ?? 0;
 
@@ -540,23 +564,8 @@ class _OmborScreenState extends State<OmborScreen> {
                                 child: Text('$soni', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                               ),
                               title: Text(nomi, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text('Omborda: $soni shtuk'),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text('\$${fields['Narxi'] ?? 0}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
-                                  IconButton(
-                                    icon: const Icon(Icons.edit, color: Colors.blue),
-                                    onPressed: () => _showEditTovarDialog(item),
-                                    tooltip: 'Tahrirlash',
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete, color: Colors.red),
-                                    onPressed: () => _confirmDeleteTovar(recordId, nomi),
-                                    tooltip: 'O\'chirish',
-                                  ),
-                                ],
-                              ),
+                              subtitle: Text('${tr('in_stock')}: $soni shtuk'),
+                              trailing: Text('\$${fields['Narxi'] ?? 0}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
                             ),
                           );
                         },
@@ -606,13 +615,13 @@ class _QarzdorlarScreenState extends State<QarzdorlarScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Nasiya / Qarz yozish'),
+          title: Text(tr('debts')),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: xaridorController,
-                decoration: const InputDecoration(labelText: 'Mijoz ismi va telefoni'),
+                decoration: InputDecoration(labelText: tr('customer')),
               ),
               TextField(
                 controller: qarzController,
@@ -621,14 +630,14 @@ class _QarzdorlarScreenState extends State<QarzdorlarScreen> {
               ),
               TextField(
                 controller: izohController,
-                decoration: const InputDecoration(labelText: 'Izoh / Qaysi tovar uchun'),
+                decoration: const InputDecoration(labelText: 'Izoh'),
               ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Bekor qilish'),
+              child: Text(tr('cancel')),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -644,48 +653,11 @@ class _QarzdorlarScreenState extends State<QarzdorlarScreen> {
                     Navigator.pop(context);
                     if (success) {
                       _refreshQarzdorlar();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Qarz ro\'yxatga yozildi!')),
-                      );
                     }
                   }
                 }
               },
-              child: const Text('Saqlash'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _confirmDeleteQarz(String recordId, String mijoz) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Qarzni yopish'),
-          content: Text('$mijoz ning qarzini to\'landi deb yopamizmi?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Yo\'q'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-              onPressed: () async {
-                final success = await _airtableService.deleteQarzdor(recordId);
-                if (mounted) {
-                  Navigator.pop(context);
-                  if (success) {
-                    _refreshQarzdorlar();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Qarz muvaffaqiyatli yopildi!')),
-                    );
-                  }
-                }
-              },
-              child: const Text('Ha, yopish'),
+              child: Text(tr('save')),
             ),
           ],
         );
@@ -697,10 +669,11 @@ class _QarzdorlarScreenState extends State<QarzdorlarScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nasiya va Qarzdorlar'),
+        title: Text(tr('debts')),
         backgroundColor: Colors.deepOrange,
         foregroundColor: Colors.white,
         actions: [
+          buildLanguageSelector(),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _refreshQarzdorlar,
@@ -712,9 +685,6 @@ class _QarzdorlarScreenState extends State<QarzdorlarScreen> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Xatolik: ${snapshot.error}'));
           }
 
           final qarzdorlar = snapshot.data ?? [];
@@ -748,11 +718,12 @@ class _QarzdorlarScreenState extends State<QarzdorlarScreen> {
                         '\$${fields['QarzSummasi'] ?? 0}',
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.deepOrange),
                       ),
-                      const SizedBox(width: 4),
                       IconButton(
                         icon: const Icon(Icons.check_circle_outline, color: Colors.green),
-                        onPressed: () => _confirmDeleteQarz(recordId, mijoz),
-                        tooltip: 'Qarzni yopish',
+                        onPressed: () async {
+                          final success = await _airtableService.deleteQarzdor(recordId);
+                          if (success) _refreshQarzdorlar();
+                        },
                       ),
                     ],
                   ),
@@ -827,6 +798,29 @@ class _HisobotScreenState extends State<HisobotScreen> {
     }
   }
 
+  Future<void> _exportCsv() async {
+    try {
+      final sotuvlar = await _airtableService.getSotuvlar();
+      StringBuffer csvData = StringBuffer();
+      csvData.writeln('Mahsulot,Summa,Xaridor,Sana');
+
+      for (var s in sotuvlar) {
+        final f = s['fields'] ?? {};
+        csvData.writeln('"${f['Mahsulot'] ?? ''}","${f['Summa'] ?? 0}","${f['Xaridor'] ?? ''}","${f['Sana'] ?? ''}"');
+      }
+
+      if (kIsWeb) {
+        final bytes = utf8.encode(csvData.toString());
+        final blob = html.Blob([bytes]);
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..setAttribute("download", "sotuvlar_hisoboti.csv")
+          ..click();
+        html.Url.revokeObjectUrl(url);
+      }
+    } catch (_) {}
+  }
+
   Widget _buildCard(String title, String value, IconData icon, Color color) {
     return Card(
       elevation: 3,
@@ -858,10 +852,11 @@ class _HisobotScreenState extends State<HisobotScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Hisobot va Tahlil'),
+        title: Text(tr('reports')),
         backgroundColor: Colors.purple,
         foregroundColor: Colors.white,
         actions: [
+          buildLanguageSelector(),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadData,
@@ -873,9 +868,20 @@ class _HisobotScreenState extends State<HisobotScreen> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                _buildCard('Jami Tushum (Sotuvlar)', '\$$_jamiSotuv', Icons.attach_money, Colors.green),
-                _buildCard('Nasiyadagi Umumiy Qarz', '\$$_jamiQarz', Icons.money_off, Colors.deepOrange),
-                _buildCard('Ombordagi Barcha Tovarlar', '$_tovarlarSoni shtuk', Icons.inventory, Colors.blueGrey),
+                _buildCard(tr('sales'), '\$$_jamiSotuv', Icons.attach_money, Colors.green),
+                _buildCard(tr('debts'), '\$$_jamiQarz', Icons.money_off, Colors.deepOrange),
+                _buildCard(tr('warehouse'), '$_tovarlarSoni shtuk', Icons.inventory, Colors.blueGrey),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: _exportCsv,
+                  icon: const Icon(Icons.download),
+                  label: Text(tr('download_csv'), style: const TextStyle(fontSize: 16)),
+                ),
               ],
             ),
     );
