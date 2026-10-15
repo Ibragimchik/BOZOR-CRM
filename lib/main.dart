@@ -32,6 +32,7 @@ final Map<String, Map<String, String>> _localizedValues = {
     'in_stock': 'Omborda',
     'close_debt': 'Qarzni yopish',
     'download_csv': 'Sotuvlar hisobotini CSV ga yuklab olish',
+    'print_receipt': 'Chek / Nakladnoy chiqarish',
     'logout': 'Chiqish',
   },
   'ru': {
@@ -52,6 +53,7 @@ final Map<String, Map<String, String>> _localizedValues = {
     'in_stock': 'На складе',
     'close_debt': 'Закрыть долг',
     'download_csv': 'Скачать отчет продаж в CSV',
+    'print_receipt': 'Печать чека / Накладной',
     'logout': 'Выход',
   },
   'kg': {
@@ -72,6 +74,8 @@ final Map<String, Map<String, String>> _localizedValues = {
     'in_stock': 'Кампада',
     'close_debt': 'Карызды жабуу',
     'download_csv': 'Сатуу отчетун CSV түрүндө жүктөө',
+    'print_receipt': 'Чек / Накладная чыгаруу',
+    'Чыгуу': 'Чыгуу',
     'logout': 'Чыгуу',
   },
 };
@@ -436,7 +440,7 @@ Future<void> logoutUser(BuildContext context) async {
   }
 }
 
-// ================= 5. SOTUVLAR EKRANI =================
+// ================= 5. SOTUVLAR EKRANI (Printer / Nakladnoy tugmasi bilan) =================
 class SotuvlarScreen extends StatefulWidget {
   const SotuvlarScreen({super.key});
 
@@ -458,6 +462,52 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
     setState(() {
       _sotuvlarFuture = _airtableService.getSotuvlar();
     });
+  }
+
+  // Chek yoki Nakladnoy chiqarish oynasini ochish
+  void _printReceiptDialog(String mahsulot, double summa, String xaridor, String sana) async {
+    final prefs = await SharedPreferences.getInstance();
+    final storeName = prefs.getString('store_name') ?? 'Bozor CRM';
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(tr('print_receipt')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('=== $storeName ===', style: const TextStyle(fontWeight: FontWeight.bold)),
+            const Divider(),
+            Text('Mahsulot: $mahsulot'),
+            Text('Xaridor: ${xaridor.isEmpty ? "Naqd xaridor" : xaridor}'),
+            Text('Summa: \$$summa'),
+            Text('Vaqti: $sana'),
+            const Divider(),
+            const Text('Xaridingiz uchun rahmat!', style: TextStyle(fontStyle: FontStyle.italic)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Yopish'),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Printerga chek yuborildi (Simulyatsiya)!')),
+              );
+            },
+            icon: const Icon(Icons.print),
+            label: const Text('Pechat qilish'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showAddSotuvDialog() async {
@@ -626,6 +676,10 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
                 }
               }
 
+              final mahsulot = fields['Mahsulot'] ?? 'Noma\'lum';
+              final summa = (fields['Summa'] ?? 0).toDouble();
+              final xaridor = fields['Xaridor'] ?? '';
+
               return Card(
                 elevation: 2,
                 margin: const EdgeInsets.symmetric(vertical: 6),
@@ -634,10 +688,20 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
                     backgroundColor: Colors.green,
                     child: Icon(Icons.shopping_bag, color: Colors.white),
                   ),
-                  title: Text(fields['Mahsulot'] ?? 'Noma\'lum', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('Xaridor: ${fields['Xaridor'] ?? 'Yo\'q'}\nVaqti: $sanaStr'),
+                  title: Text(mahsulot, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text('Xaridor: ${xaridor.isEmpty ? "Yo\'q" : xaridor}\nVaqti: $sanaStr'),
                   isThreeLine: true,
-                  trailing: Text('\$${fields['Summa'] ?? 0}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green)),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('\$$summa', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green)),
+                      IconButton(
+                        icon: const Icon(Icons.print, color: Colors.blueGrey),
+                        onPressed: () => _printReceiptDialog(mahsulot, summa, xaridor, sanaStr),
+                        tooltip: 'Chek chiqarish',
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -653,7 +717,7 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
   }
 }
 
-// ================= 6. OMBOR EKRANI (Ko'p omborli tanlov bilan) =================
+// ================= 6. OMBOR EKRANI =================
 class OmborScreen extends StatefulWidget {
   const OmborScreen({super.key});
 
@@ -668,7 +732,6 @@ class _OmborScreenState extends State<OmborScreen> {
   bool _isLoading = true;
   final TextEditingController _searchController = TextEditingController();
   
-  // Tanlangan ombor filtri ('Barchasi' yoki muayyan ombor nomi)
   String _selectedOmbor = 'Barchasi';
   final List<String> _omborlarRoyxati = ['Barchasi', 'Asosiy ombor', 'Chakana do\'kon', 'Sklad №2'];
 
@@ -819,7 +882,6 @@ class _OmborScreenState extends State<OmborScreen> {
       ),
       body: Column(
         children: [
-          // Omborlar bo'yicha filter tugmalari (Chips)
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
