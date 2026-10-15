@@ -13,7 +13,6 @@ void main() {
 // Global til boshqaruvi uchun notifier
 final ValueNotifier<String> currentLanguageNotifier = ValueNotifier<String>('uz');
 
-// Lug'at bazasi (O'zbekcha, Ruscha, Qirg'izcha)
 final Map<String, Map<String, String>> _localizedValues = {
   'uz': {
     'sales': 'Sotuvlar',
@@ -210,7 +209,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     await prefs.setString('user_pin', _pinController.text);
     await prefs.setString('bot_token', _botTokenController.text);
     
-    // 14 kunlik sinov muddatini belgilash
     final trialExpiry = DateTime.now().add(const Duration(days: 14)).toIso8601String();
     await prefs.setString('trial_expiry', trialExpiry);
 
@@ -412,7 +410,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-// Til tanlash tugmasi komponenti
 Widget buildLanguageSelector(BuildContext context) {
   return PopupMenuButton<String>(
     icon: const Icon(Icons.language, color: Colors.white),
@@ -420,26 +417,16 @@ Widget buildLanguageSelector(BuildContext context) {
       currentLanguageNotifier.value = langCode;
     },
     itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-      const PopupMenuItem<String>(
-        value: 'uz',
-        child: Text('O\'zbekcha 🇺🇿'),
-      ),
-      const PopupMenuItem<String>(
-        value: 'ru',
-        child: Text('Русский 🇷🇺'),
-      ),
-      const PopupMenuItem<String>(
-        value: 'kg',
-        child: Text('Кыргызча 🇰🇬'),
-      ),
+      const PopupMenuItem<String>(value: 'uz', child: Text('O\'zbekcha 🇺🇿')),
+      const PopupMenuItem<String>(value: 'ru', child: Text('Русский 🇷🇺')),
+      const PopupMenuItem<String>(value: 'kg', child: Text('Кыргызча 🇰🇬')),
     ],
   );
 }
 
-// Chiqish tugmasi (Logout)
 Future<void> logoutUser(BuildContext context) async {
   final prefs = await SharedPreferences.getInstance();
-  await prefs.remove('user_pin'); // PINni o'chiramiz, qaytadan PIN so'raydi
+  await prefs.remove('user_pin'); 
 
   if (context.mounted) {
     Navigator.pushReplacement(
@@ -507,9 +494,10 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
                     decoration: InputDecoration(labelText: tr('select_product')),
                     items: tovarlar.map((t) {
                       final fields = t['fields'] ?? {};
+                      final ombor = fields['Ombor'] ?? 'Asosiy';
                       return DropdownMenuItem(
                         value: t,
-                        child: Text('${fields['Nomi']} (${fields['Soni']} sht)'),
+                        child: Text('${fields['Nomi']} ($ombor: ${fields['Soni']} sht)'),
                       );
                     }).toList(),
                     onChanged: (val) {
@@ -556,7 +544,6 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
                       }
 
                       final sanaStr = DateTime.now().toIso8601String();
-
                       final sotuvFields = {
                         'Mahsulot': fields['Nomi'],
                         'Summa': hisoblanganSumma,
@@ -666,7 +653,7 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
   }
 }
 
-// ================= 6. OMBOR EKRANI =================
+// ================= 6. OMBOR EKRANI (Ko'p omborli tanlov bilan) =================
 class OmborScreen extends StatefulWidget {
   const OmborScreen({super.key});
 
@@ -680,6 +667,10 @@ class _OmborScreenState extends State<OmborScreen> {
   List<Map<String, dynamic>> _filteredTovarlar = [];
   bool _isLoading = true;
   final TextEditingController _searchController = TextEditingController();
+  
+  // Tanlangan ombor filtri ('Barchasi' yoki muayyan ombor nomi)
+  String _selectedOmbor = 'Barchasi';
+  final List<String> _omborlarRoyxati = ['Barchasi', 'Asosiy ombor', 'Chakana do\'kon', 'Sklad №2'];
 
   @override
   void initState() {
@@ -700,7 +691,7 @@ class _OmborScreenState extends State<OmborScreen> {
       final data = await _airtableService.getTovarlar();
       setState(() {
         _tovarlar = data;
-        _filteredTovarlar = data;
+        _filterTovarlar();
         _isLoading = false;
       });
     } catch (_) {
@@ -712,8 +703,14 @@ class _OmborScreenState extends State<OmborScreen> {
     final query = _searchController.text.toLowerCase();
     setState(() {
       _filteredTovarlar = _tovarlar.where((tovar) {
-        final nomi = (tovar['fields']['Nomi'] ?? '').toString().toLowerCase();
-        return nomi.contains(query);
+        final fields = tovar['fields'] ?? {};
+        final nomi = (fields['Nomi'] ?? '').toString().toLowerCase();
+        final ombor = (fields['Ombor'] ?? 'Asosiy ombor').toString();
+
+        final matchesSearch = nomi.contains(query);
+        final matchesOmbor = (_selectedOmbor == 'Barchasi') || (ombor == _selectedOmbor);
+
+        return matchesSearch && matchesOmbor;
       }).toList();
     });
   }
@@ -722,60 +719,79 @@ class _OmborScreenState extends State<OmborScreen> {
     final nomiController = TextEditingController();
     final narxiController = TextEditingController();
     final soniController = TextEditingController();
+    String tanlanganOmbor = 'Asosiy ombor';
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text(tr('add_product')),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nomiController,
-                decoration: const InputDecoration(labelText: 'Tovar nomi'),
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(tr('add_product')),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nomiController,
+                    decoration: const InputDecoration(labelText: 'Tovar nomi'),
+                  ),
+                  TextField(
+                    controller: narxiController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(labelText: tr('price')),
+                  ),
+                  TextField(
+                    controller: soniController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(labelText: tr('quantity')),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: tanlanganOmbor,
+                    decoration: const InputDecoration(labelText: 'Omborni tanlang'),
+                    items: ['Asosiy ombor', 'Chakana do\'kon', 'Sklad №2'].map((o) {
+                      return DropdownMenuItem(value: o, child: Text(o));
+                    }).toList(),
+                    onChanged: (val) {
+                      setDialogState(() {
+                        tanlanganOmbor = val!;
+                      });
+                    },
+                  ),
+                ],
               ),
-              TextField(
-                controller: narxiController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: tr('price')),
-              ),
-              TextField(
-                controller: soniController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: tr('quantity')),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(tr('cancel')),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (nomiController.text.isNotEmpty) {
-                  final fields = {
-                    'Nomi': nomiController.text,
-                    'Narxi': double.tryParse(narxiController.text) ?? 0,
-                    'Soni': int.tryParse(soniController.text) ?? 0,
-                  };
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(tr('cancel')),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (nomiController.text.isNotEmpty) {
+                      final fields = {
+                        'Nomi': nomiController.text,
+                        'Narxi': double.tryParse(narxiController.text) ?? 0,
+                        'Soni': int.tryParse(soniController.text) ?? 0,
+                        'Ombor': tanlanganOmbor,
+                      };
 
-                  final success = await _airtableService.addTovar(fields);
-                  if (mounted) {
-                    Navigator.pop(context);
-                    if (success) {
-                      _loadTovarlar();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Tovar qo\'shildi!')),
-                      );
+                      final success = await _airtableService.addTovar(fields);
+                      if (mounted) {
+                        Navigator.pop(context);
+                        if (success) {
+                          _loadTovarlar();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Tovar omborga qo\'shildi!')),
+                          );
+                        }
+                      }
                     }
-                  }
-                }
-              },
-              child: Text(tr('save')),
-            ),
-          ],
+                  },
+                  child: Text(tr('save')),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -803,8 +819,30 @@ class _OmborScreenState extends State<OmborScreen> {
       ),
       body: Column(
         children: [
+          // Omborlar bo'yicha filter tugmalari (Chips)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: _omborlarRoyxati.map((ombor) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: ChoiceChip(
+                    label: Text(ombor),
+                    selected: _selectedOmbor == ombor,
+                    onSelected: (selected) {
+                      setState(() {
+                        _selectedOmbor = ombor;
+                        _filterTovarlar();
+                      });
+                    },
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
           Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
@@ -831,6 +869,7 @@ class _OmborScreenState extends State<OmborScreen> {
                           final fields = item['fields'] ?? {};
                           final nomi = fields['Nomi'] ?? 'Noma\'lum';
                           final soni = fields['Soni'] ?? 0;
+                          final omborNomi = fields['Ombor'] ?? 'Asosiy ombor';
 
                           return Card(
                             elevation: 2,
@@ -841,7 +880,8 @@ class _OmborScreenState extends State<OmborScreen> {
                                 child: Text('$soni', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                               ),
                               title: Text(nomi, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text('${tr('in_stock')}: $soni shtuk'),
+                              subtitle: Text('Ombor: $omborNomi\nQoldiq: $soni shtuk'),
+                              isThreeLine: true,
                               trailing: Text('\$${fields['Narxi'] ?? 0}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
                             ),
                           );
