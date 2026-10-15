@@ -4,6 +4,7 @@ import 'services/airtable_service.dart';
 import 'package:intl/intl.dart';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const BozorCrmApp());
@@ -32,7 +33,7 @@ final Map<String, Map<String, String>> _localizedValues = {
     'in_stock': 'Omborda',
     'close_debt': 'Qarzni yopish',
     'download_csv': 'Sotuvlar hisobotini CSV ga yuklab olish',
-    'language': 'Til / Язык',
+    'logout': 'Chiqish',
   },
   'ru': {
     'sales': 'Продажи',
@@ -52,7 +53,7 @@ final Map<String, Map<String, String>> _localizedValues = {
     'in_stock': 'На складе',
     'close_debt': 'Закрыть долг',
     'download_csv': 'Скачать отчет продаж в CSV',
-    'language': 'Язык / Til',
+    'logout': 'Выход',
   },
   'kg': {
     'sales': 'Сатуулар',
@@ -72,7 +73,7 @@ final Map<String, Map<String, String>> _localizedValues = {
     'in_stock': 'Кампада',
     'close_debt': 'Карызды жабуу',
     'download_csv': 'Сатуу отчетун CSV түрүндө жүктөө',
-    'language': 'Тил / Language',
+    'logout': 'Чыгуу',
   },
 };
 
@@ -96,13 +97,266 @@ class BozorCrmApp extends StatelessWidget {
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
             useMaterial3: true,
           ),
-          home: const MainNavigationScreen(),
+          home: const AuthWrapper(),
         );
       },
     );
   }
 }
 
+// ================= 1. AUTENTIFIKATSIYA TEKSHIRUVCHISI =================
+class AuthWrapper extends StatefulWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  bool _isLoading = true;
+  bool _isLoggedIn = false;
+  bool _hasAccount = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthStatus();
+  }
+
+  Future<void> _checkAuthStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final email = prefs.getString('user_email');
+    final pin = prefs.getString('user_pin');
+
+    setState(() {
+      _hasAccount = email != null;
+      _isLoggedIn = pin != null; 
+      _isLoading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (!_hasAccount) {
+      return const RegisterScreen();
+    } else if (!_isLoggedIn) {
+      return const PinLoginScreen();
+    } else {
+      return const MainNavigationScreen();
+    }
+  }
+}
+
+// ================= 2. RO'YXATDAN O'TISH EKRANI (Sign Up) =================
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
+
+  @override
+  State<RegisterScreen> createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends State<RegisterScreen> {
+  final _storeNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _pinController = TextEditingController();
+  final _botTokenController = TextEditingController();
+
+  void _showTokenGuide() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Telegram Bot Token qanday olinadi?'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('1. Telegram\'da @BotFather botini toping.'),
+            SizedBox(height: 8),
+            Text('2. /newbot buyrug\'ini yuboring va botingizga nom bering.'),
+            SizedBox(height: 8),
+            Text('3. BotFather sizga bergan HTTP API Token\'ni nusxalab, shu yerga yopishtiring.'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tushunarli'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _register() async {
+    if (_storeNameController.text.isEmpty ||
+        _emailController.text.isEmpty ||
+        _pinController.text.length != 4) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Barcha maydonlarni to\'g\'ri to\'ldiring va 4 xonali PIN kiriting!')),
+      );
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('store_name', _storeNameController.text);
+    await prefs.setString('user_email', _emailController.text);
+    await prefs.setString('user_pin', _pinController.text);
+    await prefs.setString('bot_token', _botTokenController.text);
+    
+    // 14 kunlik sinov muddatini belgilash
+    final trialExpiry = DateTime.now().add(const Duration(days: 14)).toIso8601String();
+    await prefs.setString('trial_expiry', trialExpiry);
+
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Bozor CRM - Ro\'yxatdan o\'tish')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ListView(
+          children: [
+            const Text(
+              '14 kunlik bepul sinov davri taqdim etiladi!',
+              style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _storeNameController,
+              decoration: const InputDecoration(labelText: 'Do\'kon / Biznes nomi', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _emailController,
+              decoration: const InputDecoration(labelText: 'Email yoki Telefon raqam', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'Parol', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _pinController,
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'Tezkor 4 xonali PIN-kod', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _botTokenController,
+                    decoration: const InputDecoration(labelText: 'Telegram Bot Token (ixtiyoriy)', border: OutlineInputBorder()),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.help_outline, color: Colors.blue, size: 30),
+                  onPressed: _showTokenGuide,
+                  tooltip: 'Tokenni qanday olish mumkin?',
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14)),
+              onPressed: _register,
+              child: const Text('Ro\'yxatdan o\'tish va boshlash', style: TextStyle(fontSize: 16)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ================= 3. 4 XONALI PIN-KOD BILAN KIRISH EKRANI =================
+class PinLoginScreen extends StatefulWidget {
+  const PinLoginScreen({super.key});
+
+  @override
+  State<PinLoginScreen> createState() => _PinLoginScreenState();
+}
+
+class _PinLoginScreenState extends State<PinLoginScreen> {
+  final _pinController = TextEditingController();
+
+  Future<void> _verifyPin() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedPin = prefs.getString('user_pin');
+
+    if (_pinController.text == savedPin) {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('PIN-kod noto\'g\'ri!')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.lock_outline, size: 64, color: Colors.green),
+              const SizedBox(height: 16),
+              const Text('Tizimga kirish uchun PIN-kodni kiriting', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: 200,
+                child: TextField(
+                  controller: _pinController,
+                  keyboardType: TextInputType.number,
+                  maxLength: 4,
+                  obscureText: true,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 24, letterSpacing: 8),
+                  decoration: const InputDecoration(border: OutlineInputBorder()),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                onPressed: _verifyPin,
+                child: const Text('Kirish'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ================= 4. ASOSIY NAVIGATSIYA EKRANI =================
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
 
@@ -159,7 +413,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 }
 
 // Til tanlash tugmasi komponenti
-Widget buildLanguageSelector() {
+Widget buildLanguageSelector(BuildContext context) {
   return PopupMenuButton<String>(
     icon: const Icon(Icons.language, color: Colors.white),
     onSelected: (String langCode) {
@@ -182,7 +436,20 @@ Widget buildLanguageSelector() {
   );
 }
 
-// ================= 1. SOTUVLAR EKRANI =================
+// Chiqish tugmasi (Logout)
+Future<void> logoutUser(BuildContext context) async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.remove('user_pin'); // PINni o'chiramiz, qaytadan PIN so'raydi
+
+  if (context.mounted) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const AuthWrapper()),
+    );
+  }
+}
+
+// ================= 5. SOTUVLAR EKRANI =================
 class SotuvlarScreen extends StatefulWidget {
   const SotuvlarScreen({super.key});
 
@@ -329,7 +596,12 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
         actions: [
-          buildLanguageSelector(),
+          buildLanguageSelector(context),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => logoutUser(context),
+            tooltip: tr('logout'),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _refreshSotuvlar,
@@ -394,7 +666,7 @@ class _SotuvlarScreenState extends State<SotuvlarScreen> {
   }
 }
 
-// ================= 2. OMBOR EKRANI =================
+// ================= 6. OMBOR EKRANI =================
 class OmborScreen extends StatefulWidget {
   const OmborScreen({super.key});
 
@@ -517,7 +789,12 @@ class _OmborScreenState extends State<OmborScreen> {
         backgroundColor: Colors.blueGrey,
         foregroundColor: Colors.white,
         actions: [
-          buildLanguageSelector(),
+          buildLanguageSelector(context),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => logoutUser(context),
+            tooltip: tr('logout'),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadTovarlar,
@@ -582,7 +859,7 @@ class _OmborScreenState extends State<OmborScreen> {
   }
 }
 
-// ================= 3. QARZDORLAR EKRANI =================
+// ================= 7. QARZDORLAR EKRANI =================
 class QarzdorlarScreen extends StatefulWidget {
   const QarzdorlarScreen({super.key});
 
@@ -651,9 +928,7 @@ class _QarzdorlarScreenState extends State<QarzdorlarScreen> {
                   final success = await _airtableService.addQarzdor(fields);
                   if (mounted) {
                     Navigator.pop(context);
-                    if (success) {
-                      _refreshQarzdorlar();
-                    }
+                    if (success) _refreshQarzdorlar();
                   }
                 }
               },
@@ -673,7 +948,12 @@ class _QarzdorlarScreenState extends State<QarzdorlarScreen> {
         backgroundColor: Colors.deepOrange,
         foregroundColor: Colors.white,
         actions: [
-          buildLanguageSelector(),
+          buildLanguageSelector(context),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => logoutUser(context),
+            tooltip: tr('logout'),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _refreshQarzdorlar,
@@ -742,7 +1022,7 @@ class _QarzdorlarScreenState extends State<QarzdorlarScreen> {
   }
 }
 
-// ================= 4. HISOBOTLAR EKRANI =================
+// ================= 8. HISOBOTLAR EKRANI =================
 class HisobotScreen extends StatefulWidget {
   const HisobotScreen({super.key});
 
@@ -856,7 +1136,12 @@ class _HisobotScreenState extends State<HisobotScreen> {
         backgroundColor: Colors.purple,
         foregroundColor: Colors.white,
         actions: [
-          buildLanguageSelector(),
+          buildLanguageSelector(context),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => logoutUser(context),
+            tooltip: tr('logout'),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadData,
