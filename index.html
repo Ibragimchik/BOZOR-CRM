@@ -6,6 +6,7 @@
   <title>Bozor hisobi — SaaS</title>
   <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;600;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     :root {
       --bg: #0f172a;
@@ -90,9 +91,18 @@
   </div>
 </div>
 
+<!-- SHTRIX-KOD KAMERA SKANERI OYNASI -->
+<div id="scanModal" class="modal-bg">
+  <div class="modal-c">
+    <h3><span>📷 Shtrix-kod / QR Skaner</span><button class="x" onclick="stopScanner()">✕</button></h3>
+    <div id="scanReader" style="width:100%;min-height:240px;background:#0b1120;border-radius:10px;overflow:hidden"></div>
+    <p class="mu" style="text-align:center;margin-top:8px">Kamerani tovar shtrix-kodiga tuting yoki USB skanerdan foydalaning</p>
+  </div>
+</div>
+
 <script>
 /* =========================================================
-   0. SUPABASE XATOSIZ ULANISH (SYNTAX ERROR BERMAYDI)
+   0. SUPABASE XATOSIZ ULANISH
    ========================================================= */
 const supabaseUrl = 'https://lokihgywgmlgejxsmhuu.supabase.co';
 const supabaseKey = 'sb_publishable_Zks7tBKSRvREFzIFYZYjjA_Vu2PMxvc';
@@ -309,6 +319,17 @@ const KEY = "bozor-hisobi-v1";
 const PREF_LANG = localStorage.getItem(KEY + "-lang") || "uz";
 const PREF_CUR  = localStorage.getItem(KEY + "-cur")  || "UZS";
 
+// Doimiy saqlanadigan forma qiymatlari (o'zgarib ketmasligi uchun)
+let buyPrefs = {
+    supId: "",
+    cur: localStorage.getItem(KEY + "-buyCur") || "USD",
+    mRet: +(localStorage.getItem(KEY + "-mRet") || 25),
+    mOpt: +(localStorage.getItem(KEY + "-mOpt") || 15),
+    mBox: +(localStorage.getItem(KEY + "-mBox") || 10),
+    om:   +(localStorage.getItem(KEY + "-om")   || 5),
+    cargoCur: localStorage.getItem(KEY + "-cargoCur") || "USD"
+};
+
 let S = {
     brand: { name: "Bozor hisobi", logo: "", shopId: "849201", promoBy: "" },
     locs: [
@@ -319,7 +340,7 @@ let S = {
         { id: "sp1", name: "Matiz Zavod / Magazin", type: "sup", debtUZS: 0, payments: [] },
         { id: "cg1", name: "Fayzstar Cargo (Ombor)", type: "cargo", debtUZS: 0, payments: [] }
     ],
-    batches: [], // Zavoddan sotib olingan partiyalar (chislo bo'yicha ro'yxat, yo'lda yoki yetib kelgan)
+    batches: [],
     lots: [], moves: [], sales: [], hand: [], mexp: [],
     users: [], co: [], ord: [], cart: [],
     rate: { UZS: 1, KGS: 145, USD: 12600, CNY: 1750, RUB: 135, KZT: 26, TJS: 1150 },
@@ -353,6 +374,15 @@ if (localStorage.getItem(KEY + "-lang")) S.lang = localStorage.getItem(KEY + "-l
 if (localStorage.getItem(KEY + "-cur"))  S.cur  = localStorage.getItem(KEY + "-cur");
 
 const $ = id => document.getElementById(id);
+
+function saveBuyPrefs() {
+    if ($("supSel") && $("supSel").value !== "new") buyPrefs.supId = $("supSel").value;
+    if ($("bCur")) { buyPrefs.cur = $("bCur").value; localStorage.setItem(KEY + "-buyCur", buyPrefs.cur); }
+    if ($("mRet")) { buyPrefs.mRet = +$("mRet").value || 0; localStorage.setItem(KEY + "-mRet", buyPrefs.mRet); }
+    if ($("mOpt")) { buyPrefs.mOpt = +$("mOpt").value || 0; localStorage.setItem(KEY + "-mOpt", buyPrefs.mOpt); }
+    if ($("mBox")) { buyPrefs.mBox = +$("mBox").value || 0; localStorage.setItem(KEY + "-mBox", buyPrefs.mBox); }
+    if ($("om"))   { buyPrefs.om   = +$("om").value   || 1; localStorage.setItem(KEY + "-om",   buyPrefs.om); }
+}
 
 async function syncToSupabase() {
     if (!supabaseClient) return;
@@ -421,9 +451,10 @@ if (!S.users || S.users.length === 0) {
 }
 
 let USER = null, role = "boss", tab = "home", ERR = "", OK = "", activeLoc = "all", authMode = "login", selLotId = "";
-let activePartnerId = null; // Tanlangan zavod yoki kargo ichiga kirish uchun
-let openBatchId = null;     // Zavod ichida bosilgan chislo (partiya)ni ochish uchun
-let showDirectWhAdd = false; // Sklad bo'limida tayyor tovar qo'shish oynasini ochish/yopish
+let activePartnerId = null;
+let openBatchId = null;
+let showDirectWhAdd = false;
+let posSelectedCustId = ""; // POS da tanlangan mijoz (sotuv yakunlanguncha o'zgarib ketmaydi)
 
 try { USER = S.users.find(u => u.id == localStorage.getItem(KEY + "-u")) || null; } catch(e) {}
 if (USER) {
@@ -436,13 +467,13 @@ if (USER) {
 const roleName = r => tr("role_" + r);
 
 const L = id => S.lots.find(l => l.id == id);
-const tot = l => l.boxes * l.per;
+const tot = l => (l.boxes * (l.per || 1)) + (+l.extraPcs || 0);
 const cost = l => l.buy + sum(l.exp || [], "amt");
 const unit = l => tot(l) > 0 ? cost(l) / tot(l) : 0;
 const sold = (l, locId) => sum(S.sales.filter(s => s.lot == l.id && (!locId || s.loc == locId)), "q");
 
 const inLoc = (l, locId) => {
-    if (l.status === "transit") return 0; // Yo'ldagi tovar hali skladda emas
+    if (l.status === "transit") return 0;
     const startWh = l.initWh || "wh1";
     let q = (locId === startWh) ? tot(l) : 0;
     S.moves.forEach(m => {
@@ -486,7 +517,10 @@ const getStars = l => {
     return 1;
 };
 
-const bx = (l, q) => Math.floor(q / l.per) + " " + tr("box") + " " + (q % l.per) + " " + tr("pcs");
+const bx = (l, q) => {
+    const p = Math.max(1, l.per || 1);
+    return Math.floor(q / p) + " " + tr("box") + " " + (q % p) + " " + tr("pcs");
+};
 const tm = t => new Date(t).toLocaleDateString("ru-RU") + " " + new Date(t).toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"});
 
 const getTabs = () => {
@@ -501,7 +535,7 @@ const getTabs = () => {
 };
 
 function pr(l, q, mode) {
-    if (mode === "box" || (l.pBox && q >= l.per && mode !== "ret" && mode !== "opt")) return { p: l.pBox ? Math.round(l.pBox / l.per) : l.pRet, t: tr("prBox") };
+    if (mode === "box" || (l.pBox && q >= l.per && mode !== "ret" && mode !== "opt")) return { p: l.pBox ? Math.round(l.pBox / Math.max(1, l.per)) : l.pRet, t: tr("prBox") };
     if (mode === "opt" || (l.pOpt && q >= (l.optMin || 5) && mode !== "ret")) return { p: l.pOpt, t: tr("prOpt") };
     return { p: l.pRet, t: tr("prRet") };
 }
@@ -547,8 +581,8 @@ function calcWallets() {
    ========================================================= */
 let tmpBuyImg = "";
 let tmpWhImg = "";
-let posCart = []; // POS savdo uchun ko'p tovarli vaqtinchalik ro'yxat
-let buyCart = []; // Zavoddan sotib olishda tovarlar ketma-ketligi savatchasi
+let posCart = [];
+let buyCart = [];
 
 const V = {
     home() {
@@ -575,20 +609,23 @@ const V = {
         </div>` : `<div class="c">${tr("startImp")}</div>`);
     },
 
-    // SOTIB OLISH BO'LIMI (1-qatorda faqat Magazin nomi, ketma-ketlik, "Sotib oldim", O'ng tomonda Magazin va Kargo ichiga kirish, o'chirish, yo'ldagi tovarni kargoga biriktirish)
+    // SOTIB OLISH (Valyuta va foyda % lari o'zgarib ketmaydi, har bir tovarga alohida kargo va yo'lkira yoziladi)
     buy() {
         const sups = (S.sups || []).filter(x => x.type !== "cargo");
         const cargos = (S.sups || []).filter(x => x.type === "cargo");
         const whs = S.locs.filter(x => x.type === "wh");
-        const cartTot = buyCart.reduce((a, c) => a + c.totCur, 0);
+        const cartTot = Math.round(buyCart.reduce((a, c) => a + c.totCur, 0) * 100) / 100;
+        if (!buyPrefs.supId && sups.length) buyPrefs.supId = sups[0].id;
 
-        // O'ng tomonda Magazin yoki Kargo ichiga kirilgan holat
         let rightSideHtml = "";
         const partner = activePartnerId ? (S.sups || []).find(x => x.id == activePartnerId) : null;
 
         if (partner) {
             const isCargo = partner.type === "cargo";
-            const partnerBatches = (S.batches || []).filter(b => isCargo ? b.cargoId === partner.id : b.supId === partner.id).slice().reverse();
+            const partnerBatches = (S.batches || []).filter(b => {
+                if (!isCargo) return b.supId === partner.id;
+                return b.cargoId === partner.id || (b.lotIds || []).some(lid => { const l = L(lid); return l && l.cargoId === partner.id; });
+            }).slice().reverse();
             const payments = (partner.payments || []).slice().reverse();
 
             rightSideHtml = `<div class="c">
@@ -600,58 +637,65 @@ const V = {
                     <div class="mu">Joriy qolgan qarzimiz:</div>
                     <div class="big" style="color:${partner.debtUZS>0?'var(--bad)':'var(--ok)'}">${f(partner.debtUZS||0)} <small>${S.cur}</small></div>
                     <div class="row" style="margin-top:10px;margin-bottom:0">
-                        <input id="inPayAmt" type="number" placeholder="Toʻlanayotgan summa (${S.cur})">
+                        <input id="inPayAmt" type="number" step="any" placeholder="Toʻlanayotgan summa (${S.cur})">
                         <input id="inPayNote" placeholder="Izoh (masalan: Alipay / Naqd)">
                         <button class="b b-ok" onclick="payInsidePartner('${partner.id}')">💸 Pul topshirish / Toʻlash</button>
                     </div>
                 </div>
 
-                <h4>📅 ${isCargo ? 'Kargo orqali kelgan partiyalar (Chislo boʻyicha)' : 'Sotib olingan partiyalar (Chislo ustiga bosing)'}</h4>
+                <h4>📅 ${isCargo ? 'Kargo orqali kelgan tovarlar (Chislo boʻyicha)' : 'Sotib olingan partiyalar (Chislo ustiga bosing)'}</h4>
                 ${partnerBatches.length ? partnerBatches.map(b => {
                     const isOpen = openBatchId === b.id;
-                    const isArrived = b.status === "arrived";
+                    const batchLots = (b.lotIds || []).map(id => L(id)).filter(Boolean);
+                    const allArrived = batchLots.length > 0 && batchLots.every(l => l.status !== "transit");
                     return `<div style="margin-bottom:10px">
                         <button class="batch-btn" onclick="openBatchId=(openBatchId==='${b.id}'?null:'${b.id}');render()">
-                            <span>📅 <b>${tm(b.t)}</b> — ${b.items.length} xil tovar (${b.totCur} ${b.cur})</span>
-                            <span class="badge ${isArrived?'badge-ok':'badge-tp'}">${isArrived ? '✅ Skladga kelgan' : '🚚 Yoʻlda (Kutilmoqda)'} ${isOpen ? '▲' : '▼'}</span>
+                            <span>📅 <b>${tm(b.t)}</b> — ${batchLots.length} xil tovar (${b.totCur} ${b.cur})</span>
+                            <span class="badge ${allArrived?'badge-ok':'badge-tp'}">${allArrived ? '✅ Barchasi Skladda' : '🚚 Yoʻlda (Alohida qabul qilish)'} ${isOpen ? '▲' : '▼'}</span>
                         </button>
                         ${isOpen ? `<div class="c" style="background:#0b1120;margin-top:-4px;border-color:var(--ac)">
-                            <div class="tw"><table>
-                                <tr><th>#</th><th>Tovar</th><th>Karobka / Dona</th><th>Narxi</th><th class="r">Jami</th></tr>
-                                ${b.items.map((it, idx) => `<tr>
-                                    <td>${idx + 1}</td>
-                                    <td><b>${esc(it.name)}</b></td>
-                                    <td>${it.boxes} karobka × ${it.per} = <b>${it.boxes * it.per} dona</b></td>
-                                    <td>${it.buyUnitCur} ${b.cur}</td>
-                                    <td class="r"><b>${it.totCur} ${b.cur}</b></td>
-                                </tr>`).join("")}
-                            </table></div>
-                            ${!isArrived ? `
-                                <div class="calc-box">
-                                    <h4 style="margin:0 0 8px;color:var(--tp)">🚚 Kargo biriktirish va Skladga qabul qilish</h4>
-                                    <div class="row">
-                                        <label>Qaysi Kargodan keldi?
-                                            <select id="arrCg_${b.id}">
-                                                ${cargos.map(c=>`<option value="${c.id}">🚚 ${esc(c.name)}</option>`).join("")}
-                                            </select>
-                                        </label>
-                                        <label>Qaysi Skladga tushadi?
-                                            <select id="arrWh_${b.id}">
-                                                ${whs.map(w=>`<option value="${w.id}">🏭 ${esc(locTitle(w))}</option>`).join("")}
-                                            </select>
-                                        </label>
+                            <p class="mu" style="margin-top:0">Har bir tovar qaysi kargoda kelgani, vazni (kg) va yoʻlkirasini (valyutasi bilan) alohida-alohida kiritib skladga qabul qiling:</p>
+                            ${batchLots.map((l, idx) => {
+                                const isLotReady = l.status !== "transit";
+                                return `<div class="calc-box" style="border-color:${isLotReady?'var(--ok)':'var(--tp)'}">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+                                        <b>${idx + 1}. ${esc(l.name)} — ${l.boxes} karobka × ${l.per} = ${tot(l)} dona</b>
+                                        <span class="badge ${isLotReady?'badge-ok':'badge-tp'}">${isLotReady ? '✅ Skladda' : '🚚 Yoʻlda'}</span>
                                     </div>
-                                    <div class="row">
-                                        <label>Jami ogʻirligi (kg)<input id="arrKg_${b.id}" type="number" step="any" placeholder="Masalan: 120"></label>
-                                        <label>Kargo puli (${S.cur} da)<input id="arrCost_${b.id}" type="number" step="any" placeholder="Jami kargo summasi"></label>
-                                    </div>
-                                    <button class="b b-ok" style="width:100%;margin-top:6px" onclick="receiveBatchCargo('${b.id}')">✅ Kargoni saqlash va Tovarlarni Skladga kiritish</button>
-                                </div>
-                            ` : `
-                                <div class="mu" style="padding:6px 0">
-                                    🚚 Kargo: <b>${esc(b.cargoName || "-")}</b> | ⚖️ Jami vazn: <b>${b.totalKg || 0} kg</b> | 💰 Kargo puli: <b>${f(b.cargoCostUZS || 0)} ${S.cur}</b>
-                                </div>
-                            `}
+                                    ${!isLotReady ? `
+                                        <div class="row">
+                                            <label>Qaysi Kargo?
+                                                <select id="lCg_${l.id}">
+                                                    ${cargos.map(c=>`<option value="${c.id}">🚚 ${esc(c.name)}</option>`).join("")}
+                                                </select>
+                                            </label>
+                                            <label>Qaysi Skladga?
+                                                <select id="lWh_${l.id}">
+                                                    ${whs.map(w=>`<option value="${w.id}">🏭 ${esc(locTitle(w))}</option>`).join("")}
+                                                </select>
+                                            </label>
+                                            <label>Vazni (kg)
+                                                <input id="lKg_${l.id}" type="number" step="any" placeholder="0 kg">
+                                            </label>
+                                        </div>
+                                        <div class="row">
+                                            <label>Kargo valyutasi
+                                                <select id="lCur_${l.id}" onchange="buyPrefs.cargoCur=this.value;localStorage.setItem(KEY+'-cargoCur',this.value)">
+                                                    ${["USD","CNY","KGS","UZS","RUB","KZT","TJS"].map(c=>`<option value="${c}" ${c===buyPrefs.cargoCur?"selected":""}>${c}</option>`).join("")}
+                                                </select>
+                                            </label>
+                                            <label>Yoʻlkira / Kargo puli
+                                                <input id="lCost_${l.id}" type="number" step="any" placeholder="Masalan: 45">
+                                            </label>
+                                            <button class="b b-ok" onclick="receiveSingleLotCargo('${b.id}','${l.id}')">✅ Shu tovarni qabul qilish</button>
+                                        </div>
+                                    ` : `
+                                        <div class="mu">
+                                            🚚 Kargo: <b>${esc(l.cargoName || "-")}</b> | ⚖️ Vazni: <b>${l.kg || 0} kg</b> | 💰 Yoʻlkira: <b>${l.cargoOrigTxt || (f(sum(l.exp,'amt')) + ' ' + S.cur)}</b> | 📌 1 dona tannarxi: <b>${f(unit(l))} ${S.cur}</b>
+                                        </div>
+                                    `}
+                                </div>`;
+                            }).join("")}
                         </div>` : ""}
                     </div>`;
                 }).join("") : `<p class="mu">Hali partiyalar yoʻq.</p>`}
@@ -667,7 +711,6 @@ const V = {
                 </table></div>` : `<p class="mu">Hali toʻlov qilinmagan.</p>`}
             </div>`;
         } else {
-            // Asosiy ro'yxat ko'rinishi (Magazinlar va Kargolar ketma-ketligi + O'chirish + Ichiga kirish)
             rightSideHtml = `<div class="c">
                 <h3>${tr("supTitle")}</h3>
                 <p class="mu" style="margin-top:-6px;margin-bottom:10px">💡 Magazin yoki Kargo nomining ustiga bossangiz ichidagi barcha chislolar, tovarlar va toʻlovlar ochiladi.</p>
@@ -691,7 +734,7 @@ const V = {
                         <td><b style="color:${sp.debtUZS>0?'var(--bad)':'var(--ok)'}">${f(sp.debtUZS||0)} ${S.cur}</b></td>
                         <td>
                             <div class="row" style="margin:0">
-                                <input id="spd_${sp.id}" type="number" placeholder="${tr("amt")}" style="width:90px">
+                                <input id="spd_${sp.id}" type="number" step="any" placeholder="${tr("amt")}" style="width:90px">
                                 <button class="b b-sm" onclick="payPartnerDebtById('${sp.id}')">${tr("payBtn")}</button>
                             </div>
                         </td>
@@ -708,7 +751,7 @@ const V = {
                         <td><b style="color:${cg.debtUZS>0?'var(--bad)':'var(--ok)'}">${f(cg.debtUZS||0)} ${S.cur}</b></td>
                         <td>
                             <div class="row" style="margin:0">
-                                <input id="spd_${cg.id}" type="number" placeholder="${tr("amt")}" style="width:90px">
+                                <input id="spd_${cg.id}" type="number" step="any" placeholder="${tr("amt")}" style="width:90px">
                                 <button class="b b-sm" onclick="payPartnerDebtById('${cg.id}')">${tr("payBtn")}</button>
                             </div>
                         </td>
@@ -719,25 +762,29 @@ const V = {
         }
 
         return `<div class="g2">
-            <!-- CHAP TOMON: 1-QATORDA FAQAT MAGAZIN NOMI (SKLAD OLIB TASHLANDI) -->
             <div class="c">
                 <h3>${tr("impNew")}</h3>
                 
                 <!-- 1-QATOR: FAQAT MAGAZIN NOMI -->
                 <div class="row">
                     <label style="width:100%">${tr("supName")}
-                        <select id="supSel" onchange="$('supNew').style.display=this.value==='new'?'block':'none'">
-                            ${sups.map(s=>`<option value="${s.id}">🏭 ${esc(s.name)}</option>`).join("")}
+                        <select id="supSel" onchange="buyPrefs.supId=this.value;$('supNew').style.display=this.value==='new'?'block':'none'">
+                            ${sups.map(s=>`<option value="${s.id}" ${s.id==buyPrefs.supId?"selected":""}>🏭 ${esc(s.name)}</option>`).join("")}
                             <option value="new">➕ ${tr("newPartner")}</option>
                         </select>
                         <input id="supNew" placeholder="Yangi magazin / zavod nomi..." style="display:none;margin-top:6px">
                     </label>
                 </div>
 
-                <!-- 2-QATOR: TOVAR NOMI VA KOD -->
+                <!-- 2-QATOR: TOVAR NOMI VA SHTRIX-KOD (+ SKANER) -->
                 <div class="row">
                     <label style="flex:2">${tr("prodName")}<input id="nm" placeholder="Nike Air Zoom..."></label>
-                    <label style="flex:1">${tr("barcode")}<input id="bc" placeholder="8901..."></label>
+                    <label style="flex:1">${tr("barcode")}
+                        <div style="display:flex;gap:4px">
+                            <input id="bc" placeholder="8901...">
+                            <button type="button" class="b b-sm b-out" style="margin-top:3px" title="Skaner" onclick="openScanner('bc')">📷</button>
+                        </div>
+                    </label>
                 </div>
 
                 <!-- 3-QATOR: RASM -->
@@ -747,15 +794,15 @@ const V = {
 
                 <!-- 4-QATOR: KAROBKA VA DONA -->
                 <div class="row">
-                    ${num("bxn",tr("boxCnt"),"","10","")}
-                    ${num("pc",tr("perBox"),"","12","")}
+                    ${num("bxn",tr("boxCnt"),"","","")}
+                    ${num("pc",tr("perBox"),"","","")}
                 </div>
 
                 <div class="calc-box">
                     <div class="row">
                         <label>${tr("buyCur")}
-                            <select id="bCur">
-                                ${["USD","CNY","KGS","UZS","RUB","KZT","TJS"].map(c=>`<option value="${c}" ${c===S.cur?"selected":""}>${c}</option>`).join("")}
+                            <select id="bCur" onchange="saveBuyPrefs()">
+                                ${["USD","CNY","KGS","UZS","RUB","KZT","TJS"].map(c=>`<option value="${c}" ${c===buyPrefs.cur?"selected":""}>${c}</option>`).join("")}
                             </select>
                         </label>
                         ${num("bUnitP",tr("buyPriceUnit"),"","")}
@@ -767,12 +814,12 @@ const V = {
                 <!-- KIRITILAYOTGAN TOVARLAR KETMA-KETLIGI RO'YXATI -->
                 <div style="margin:14px 0;max-height:240px;overflow-y:auto">
                     ${buyCart.length ? `<table>
-                        <tr><th>№</th><th>Tovar</th><th>Karobka / Dona</th><th class="r">Summa</th><th></th></tr>
+                        <tr><th>№</th><th>Tovar</th><th>Karobka / Dona</th><th class="r">Summa (${buyPrefs.cur})</th><th></th></tr>
                         ${buyCart.map((it, idx) => `<tr>
                             <td><b>${idx + 1}</b></td>
                             <td><b>${esc(it.name)}</b><br><span class="mu">${it.boxes} karobka (${it.per} tadan)</span></td>
                             <td>${it.boxes * it.per} dona</td>
-                            <td class="r"><b>${it.totCur}</b></td>
+                            <td class="r"><b>${it.totCur} ${it.cur}</b></td>
                             <td class="r"><button class="x" onclick="buyCart.splice(${idx},1);render()">🗑️</button></td>
                         </tr>`).join("")}
                     </table>` : `<p class="mu" style="text-align:center;margin:10px 0">Tovarlar ketma-ketligi boʻsh. Yuqoridan tovarlarni bitta-bitta qoʻshing!</p>`}
@@ -780,30 +827,29 @@ const V = {
 
                 <div class="c" style="background:#0b1120;margin:10px 0;padding:12px">
                     <div class="mu">Jami roʻyxatdagi tovarlar summasi:</div>
-                    <div class="big" style="color:var(--tp)">${cartTot}</div>
+                    <div class="big" style="color:var(--tp)">${cartTot} <small>${buyPrefs.cur}</small></div>
                 </div>
 
                 <div class="row">
-                    ${num("mRet",tr("mrgRet"),"","25","")}
-                    ${num("mOpt",tr("mrgOpt"),"","15","")}
-                    ${num("mBox",tr("mrgBox"),"","10","")}
+                    ${num("mRet",tr("mrgRet"),"",buyPrefs.mRet,"saveBuyPrefs()")}
+                    ${num("mOpt",tr("mrgOpt"),"",buyPrefs.mOpt,"saveBuyPrefs()")}
+                    ${num("mBox",tr("mrgBox"),"",buyPrefs.mBox,"saveBuyPrefs()")}
                 </div>
                 <div class="row">
-                    ${num("om",tr("optMin"),"","5")}
+                    ${num("om",tr("optMin"),"",buyPrefs.om,"saveBuyPrefs()")}
                 </div>
 
                 <button class="b b-ok" style="width:100%;margin-top:8px;padding:13px" onclick="V.saveWholeBuyBatch()">✅ Sotib oldim (Magazinga yozish — Yoʻlda)</button>
             </div>
 
-            <!-- O'NG TOMON: MAGAZINLAR VA KARGOLAR RO'YXATI YOKI TANLANGAN MAGAZIN/KARGO ICHI -->
             <div>
                 ${rightSideHtml}
             </div>
         </div>`;
     },
 
-    // SAVATCHAGA KETMA-KETLIKDA QO'SHISH
     addItemToBuyCart() {
+        saveBuyPrefs();
         const nm = $("nm")?.value.trim();
         const bx = val("bxn"), pc = val("pc"), pr = val("bUnitP");
         if (!nm || bx <= 0 || pc <= 0 || pr <= 0) { alert("Tovar nomi, karobka va narxini to'liq kiriting!"); return; }
@@ -813,21 +859,19 @@ const V = {
 
         buyCart.push({
             name: nm, bc: $("bc")?.value.trim() || "", img: tmpBuyImg || "",
-            boxes: bx, per: pc, buyUnitCur: pr, totCur
+            boxes: bx, per: pc, buyUnitCur: pr, totCur, cur: buyPrefs.cur
         });
 
         tmpBuyImg = "";
-        if ($("nm")) $("nm").value = "";
-        if ($("bc")) $("bc").value = "";
-        if ($("bUnitP")) $("bUnitP").value = "";
         render();
+        setTimeout(() => { if ($("nm")) $("nm").focus(); }, 30);
     },
 
-    // "SOTIB OLDIM" TUGMASI BOSILGANDA: MAGAZIN QARZIGA VA CHISLO RO'YXATIGA "YO'LDA" QILIB YOZISH
     saveWholeBuyBatch() {
+        saveBuyPrefs();
         if (!buyCart.length) { alert("Avval tovarlarni roʻyxatga qoʻshing!"); return; }
 
-        const cur = $("bCur").value;
+        const cur = buyPrefs.cur;
         const rt = S.rate[cur] || 1;
 
         let supObj = null;
@@ -835,6 +879,7 @@ const V = {
             const sName = $("supNew").value.trim() || "Zavod";
             supObj = { id: uid(), name: sName, type: "sup", debtUZS: 0, payments: [] };
             S.sups.push(supObj);
+            buyPrefs.supId = supObj.id;
         } else supObj = S.sups.find(x => x.id == $("supSel").value);
 
         let totalSupCur = 0;
@@ -843,10 +888,10 @@ const V = {
 
         if (supObj && totalSupUZS > 0) supObj.debtUZS = (+supObj.debtUZS || 0) + totalSupUZS;
 
-        const mRet = val("mRet") || 25;
-        const mOpt = val("mOpt") || 15;
-        const mBox = val("mBox") || 10;
-        const om = val("om") || 5;
+        const mRet = buyPrefs.mRet;
+        const mOpt = buyPrefs.mOpt;
+        const mBox = buyPrefs.mBox;
+        const om   = buyPrefs.om;
 
         const batchId = uid();
         const lotIds = [];
@@ -854,19 +899,20 @@ const V = {
         buyCart.forEach(it => {
             const lid = uid();
             lotIds.push(lid);
-            const buyUZS = it.totCur * rt;
+            const itemRt = S.rate[it.cur || cur] || rt;
+            const buyUZS = it.totCur * itemRt;
             const unitCostUZS = buyUZS / (it.boxes * it.per);
             const pRet = Math.round(unitCostUZS * (1 + mRet / 100));
             const pOpt = Math.round(unitCostUZS * (1 + mOpt / 100));
             const pBox = Math.round(unitCostUZS * it.per * (1 + mBox / 100));
 
             S.lots.push({
-                id: lid, batchId, status: "transit", // Hali yo'lda, kargo belgilanganda skladga tushadi
+                id: lid, batchId, status: "transit",
                 name: it.name, bc: it.bc, img: it.img,
                 supId: supObj ? supObj.id : "",
-                supName: supObj ? supObj.name : "", cargoName: "",
+                supName: supObj ? supObj.name : "", cargoId: "", cargoName: "",
                 kg: 0, initWh: "wh1",
-                boxes: it.boxes, per: it.per, buy: buyUZS,
+                boxes: it.boxes, per: it.per, extraPcs: 0, buy: buyUZS,
                 mRet, mOpt, mBox,
                 exp: [],
                 pRet, pOpt, optMin: om, pBox, promo: 0
@@ -892,11 +938,10 @@ const V = {
             activePartnerId = supObj.id;
             openBatchId = batchId;
         }
-        OK = "✅ Tovarlar «Sotib olindi» (Yoʻlda)! Magazin ichidan kargoni belgilab skladga qabul qilishingiz mumkin.";
+        OK = "✅ Tovarlar «Sotib olindi» (Yoʻlda)! Endi har bir tovarga alohida kargo va yoʻlkira yozishingiz mumkin.";
         save(); render();
     },
 
-    // O'TKAZMA (SKLAD ⇄ SKLAD / DO'KON)
     trf() {
         const readyLots = S.lots.filter(l => l.status !== "transit");
         return `<div class="c"><h3>${tr("mvTitle")}</h3>
@@ -933,7 +978,7 @@ const V = {
         }).join("")}</table></div></div>` : "");
     },
 
-    // SKLAD, REYTING (⭐), AKSIYA VA SKLADDA MAVJUD TAYYOR TOVARNI QO'SHISH
+    // SKLAD BO'LIMI (+ SKANER, KAROBKA=0 BO'LGANDA QOLDIQ DONA KIRITISH VA SAQLAGACH 0 GA TUSHIRISH)
     wh() {
         const whs = S.locs.filter(x => x.type === "wh");
         const readyLots = S.lots.filter(l => l.status !== "transit");
@@ -949,31 +994,37 @@ const V = {
                 <div class="calc-box" style="margin-top:10px">
                     <div class="row">
                         <label style="flex:2">${tr("prodName")}<input id="dwNm" placeholder="Masalan: Adidas Futbolka..."></label>
-                        <label style="flex:1">${tr("barcode")}<input id="dwBc" placeholder="Kod / Shtrix"></label>
+                        <label style="flex:1">${tr("barcode")}
+                            <div style="display:flex;gap:4px">
+                                <input id="dwBc" placeholder="Shtrix-kod">
+                                <button type="button" class="b b-sm b-out" style="margin-top:3px" title="Skaner" onclick="openScanner('dwBc')">📷</button>
+                            </div>
+                        </label>
                         <label style="flex:1">${tr("warehouse")}
                             <select id="dwWh">${whs.map(w=>`<option value="${w.id}">${esc(locTitle(w))}</option>`).join("")}</select>
                         </label>
                     </div>
                     <div class="row">
-                        <label>${tr("prodImg")}<input type="file" accept="image/*" onchange="uploadWhImg(this)"></label>
-                        ${num("dwBx", tr("boxCnt"), "", "10", "calcDirectWhPrices()")}
-                        ${num("dwPc", tr("perBox"), "", "10", "calcDirectWhPrices()")}
+                        <label>${tr("prodImg")}<input id="dwImgIn" type="file" accept="image/*" onchange="uploadWhImg(this)"></label>
+                        ${num("dwBx", tr("boxCnt") + " (0 boʻlishi mumkin)", "", "0", "calcDirectWhPrices()")}
+                        ${num("dwPc", tr("perBox"), "", "0", "calcDirectWhPrices()")}
+                        ${num("dwExtraPcs", "Donalik qoldiq (dona)", "", "0", "calcDirectWhPrices()")}
                     </div>
                     <div class="row">
-                        ${num("dwCost", `1 dona kelgan narxi — Tannarx (${S.cur})`, "0", "", "calcDirectWhPrices()")}
-                        ${num("dwMRet", tr("mrgRet"), "", "25", "calcDirectWhPrices()")}
-                        ${num("dwMOpt", tr("mrgOpt"), "", "15", "calcDirectWhPrices()")}
-                        ${num("dwMBox", tr("mrgBox"), "", "10", "calcDirectWhPrices()")}
+                        ${num("dwCost", `1 dona kelgan narxi — Tannarx (${S.cur})`, "0", "0", "calcDirectWhPrices()")}
+                        ${num("dwMRet", tr("mrgRet"), "", buyPrefs.mRet, "calcDirectWhPrices()")}
+                        ${num("dwMOpt", tr("mrgOpt"), "", buyPrefs.mOpt, "calcDirectWhPrices()")}
+                        ${num("dwMBox", tr("mrgBox"), "", buyPrefs.mBox, "calcDirectWhPrices()")}
                     </div>
                     <div class="row">
-                        ${num("dwPRet", `Dona sotish narxi (${S.cur})`, "0", "")}
-                        ${num("dwPOpt", `Optim sotish narxi (${S.cur})`, "0", "")}
-                        ${num("dwPBox", `1 Karobka sotish narxi (${S.cur})`, "0", "")}
-                        ${num("dwOptMin", tr("optMin"), "", "5")}
+                        ${num("dwPRet", `Dona sotish narxi (${S.cur})`, "0", "0")}
+                        ${num("dwPOpt", `Optim sotish narxi (${S.cur})`, "0", "0")}
+                        ${num("dwPBox", `1 Karobka sotish narxi (${S.cur})`, "0", "0")}
+                        ${num("dwOptMin", tr("optMin"), "", buyPrefs.om)}
                     </div>
                     <button class="b b-ok" style="width:100%;margin-top:8px" onclick="addDirectWhProduct()">💾 Tayyor tovarni Skladga saqlash</button>
                 </div>
-            ` : `<p class="mu" style="margin:0">Ilgaridan skladingizda bor boʻlgan tayyor tovarlarni rasm, soni, kelgan narxi va sotish narxlari bilan toʻgʻridan-toʻgʻri shu yerdan qoʻshishingiz mumkin.</p>`}
+            ` : `<p class="mu" style="margin:0">Ilgaridan skladingizda bor boʻlgan tayyor tovarlarni shtrix-kod skaneri, rasm, karobka yoki donalik qoldiq soni bilan toʻgʻridan-toʻgʻri shu yerdan qoʻshishingiz mumkin.</p>`}
         </div>
 
         <div class="c"><h3>${tr("whTitle")}</h3>` + 
@@ -994,7 +1045,7 @@ const V = {
                 return `<tr>
                     <td>
                         ${l.img ? `<img src="${esc(l.img)}" style="width:28px;height:28px;border-radius:6px;vertical-align:middle;object-fit:cover;margin-right:6px">` : ""}
-                        <b>${esc(l.name)}</b> ${l.promo?`<span class="badge badge-tp">${tr("promoActive")} -${l.promo}%</span>`:""}
+                        <b>${esc(l.name)}</b> ${l.bc?`<span class="badge">#${esc(l.bc)}</span>`:""} ${l.promo?`<span class="badge badge-tp">${tr("promoActive")} -${l.promo}%</span>`:""}
                     </td>
                     <td><b>${f(unit(l))}</b> <small>${S.cur}</small></td>
                     <td><b>${f(l.pRet)}</b> / <span class="mu">${f(l.pOpt)} ${S.cur}</span></td>
@@ -1011,7 +1062,7 @@ const V = {
         </table></div>` : `<p class="mu">${tr("noProd")}</p>`) + `</div>`;
     },
 
-    // SOTUV TERMINALI
+    // SOTUV TERMINALI (+ SKANER VA OPTIM/NASIYA MIJOZ TANLASH — SOTUV YAKUNLANGUNCHA SAQLANIB TURADI)
     mk() {
         const curShop = (role === "sel" && USER?.loc && USER.loc !== "all") ? USER.loc : (activeLoc !== "all" ? activeLoc : null);
         const av = S.lots.filter(l => inMk(l, curShop) > 0);
@@ -1019,11 +1070,17 @@ const V = {
         if (!selLotId || !av.some(x => x.id == selLotId)) selLotId = av[0].id;
 
         const cartSum = posCart.reduce((a, c) => a + c.tot, 0);
+        const showCustBox = (sMode === "opt" || sMode === "box" || payType === "debt");
 
         return `<div class="pos-wrap">
             <div class="c">
                 <h3><span>${tr("posProds")}</span><span class="badge">${av.length}</span></h3>
-                <div class="row"><input id="posQ" placeholder="${tr("searchPh")}" oninput="filterPos()"></div>
+                <div class="row">
+                    <div style="display:flex;gap:6px;width:100%">
+                        <input id="posQ" placeholder="${tr("searchPh")}" oninput="filterPos()" onkeydown="if(event.key==='Enter'){event.preventDefault();scanPosBarcode(this.value);}">
+                        <button type="button" class="b b-out" style="margin-top:3px" onclick="openScanner('posQ')">📷 Skaner</button>
+                    </div>
+                </div>
                 <div class="pg" id="posGrid">
                     ${av.map(l => {
                         const rem = inMk(l, curShop);
@@ -1053,10 +1110,20 @@ const V = {
 
                 <label>${tr("saleMode")}</label>
                 <div class="seg" id="sModeSeg">
-                    <button type="button" class="on" onclick="setSMode('auto',this)">${tr("auto")}</button>
-                    <button type="button" onclick="setSMode('ret',this)">${tr("prRet")}</button>
-                    <button type="button" onclick="setSMode('opt',this)">${tr("prOpt")}</button>
-                    <button type="button" onclick="setSMode('box',this)">${tr("prBox")}</button>
+                    <button type="button" class="${sMode==='auto'?'on':''}" onclick="setSMode('auto',this)">${tr("auto")}</button>
+                    <button type="button" class="${sMode==='ret'?'on':''}" onclick="setSMode('ret',this)">${tr("prRet")}</button>
+                    <button type="button" class="${sMode==='opt'?'on':''}" onclick="setSMode('opt',this)">${tr("prOpt")}</button>
+                    <button type="button" class="${sMode==='box'?'on':''}" onclick="setSMode('box',this)">${tr("prBox")}</button>
+                </div>
+
+                <!-- OPTIM YOKI NASIYA BO'LGANDA MIJOZ TANLASH (SOTUV YAKUNLANGUNCHA O'ZGARMAYDI) -->
+                <div id="custBoxPos" style="display:${showCustBox?'block':'none'};margin-bottom:8px">
+                    <label>👤 Optimchi / Xaridor mijozni tanlang:
+                        <select id="selCustId" onchange="posSelectedCustId=this.value">
+                            <option value="">-- Mijozni tanlang --</option>
+                            ${(S.co||[]).map(c=>`<option value="${c.id}" ${c.id==posSelectedCustId?"selected":""}>👤 ${esc(c.name)} (${esc(c.phone||"")})</option>`).join("")}
+                        </select>
+                    </label>
                 </div>
 
                 <div class="row">
@@ -1090,23 +1157,15 @@ const V = {
 
                 <label>${tr("payMethod")}</label>
                 <div class="seg" id="payTypeSeg">
-                    <button type="button" class="on" onclick="setPayType('cash',this)">${tr("cashPay")}</button>
-                    <button type="button" onclick="setPayType('card',this)">${tr("cardPay")}</button>
-                    <button type="button" onclick="setPayType('mix',this)">${tr("mixPay")}</button>
-                    <button type="button" onclick="setPayType('debt',this)">${tr("debtPay")}</button>
+                    <button type="button" class="${payType==='cash'?'on':''}" onclick="setPayType('cash',this)">${tr("cashPay")}</button>
+                    <button type="button" class="${payType==='card'?'on':''}" onclick="setPayType('card',this)">${tr("cardPay")}</button>
+                    <button type="button" class="${payType==='mix'?'on':''}" onclick="setPayType('mix',this)">${tr("mixPay")}</button>
+                    <button type="button" class="${payType==='debt'?'on':''}" onclick="setPayType('debt',this)">${tr("debtPay")}</button>
                 </div>
 
-                <div id="mixBox" style="display:none" class="row">
+                <div id="mixBox" style="display:${payType==='mix'?'flex':'none'}" class="row">
                     <label>${tr("paidCashLbl")}<input id="pCashIn" type="number" inputmode="numeric" placeholder="0"></label>
                     <label>${tr("paidCardLbl")}<input id="pCardIn" type="number" inputmode="numeric" placeholder="0"></label>
-                </div>
-
-                <div id="debtBox" style="display:none">
-                    <label>${tr("custSelect")}
-                        <select id="selCustId">
-                            ${(S.co||[]).map(c=>`<option value="${c.id}">${esc(c.name)} (${esc(c.phone||"")})</option>`).join("")}
-                        </select>
-                    </label>
                 </div>
 
                 <button class="b b-ok" onclick="sellMulti()" style="width:100%;margin-top:10px;padding:12px">${tr("finishSale")}</button>
@@ -1114,7 +1173,6 @@ const V = {
         </div>`;
     },
 
-    // XARIDOR KATALOGI
     cat() {
         const av = S.lots.filter(l => inMk(l, null) > 0);
         const cartTot = (S.cart || []).reduce((a, c) => {
@@ -1187,7 +1245,6 @@ const V = {
         </div>`;
     },
 
-    // BUYURTMALARNI QABUL QILISH
     ord() {
         const list = (S.ord || []).slice().reverse();
         return `<div class="c"><h3>${tr("ordTitle")}</h3>
@@ -1221,7 +1278,6 @@ const V = {
         </div>`;
     },
 
-    // KASSA
     cash() {
         const W = calcWallets();
         return `<div class="g3">
@@ -1273,16 +1329,15 @@ const V = {
 
         <div class="c">
             <h3>${tr("lastSales")}</h3>
-            ${S.sales.length ? `<div class="tw"><table><tr><th>${tr("prodName")}</th><th>${tr("pcs")}</th><th>${tr("amt")}</th><th>${tr("payMethod")}</th><th class="r">${tr("time")}</th></tr>
+            ${S.sales.length ? `<div class="tw"><table><tr><th>${tr("prodName")}</th><th>Mijoz</th><th>${tr("pcs")}</th><th>${tr("amt")}</th><th>${tr("payMethod")}</th><th class="r">${tr("time")}</th></tr>
             ${S.sales.slice(-10).reverse().map(s => {
                 const l = L(s.lot);
                 const pInfo = s.pDebt > 0 ? tr("debtPay") : (s.pCard > 0 && s.pCash > 0 ? tr("mixPay") : (s.pCard > 0 ? tr("cardPay") : tr("cashPay")));
-                return `<tr><td><b>${esc(l?l.name:"Tovar")}</b></td><td>${s.q} ${tr("pcs")}</td><td><b>${f(s.tot)} ${S.cur}</b></td><td><span class="badge">${pInfo}</span></td><td class="r mu">${tm(s.t)} ${role==="boss"?`<button class="x" onclick="delSale('${s.id}')">×</button>`:""}</td></tr>`;
+                return `<tr><td><b>${esc(l?l.name:"Tovar")}</b></td><td class="mu">${esc(s.custName||"-")}</td><td>${s.q} ${tr("pcs")}</td><td><b>${f(s.tot)} ${S.cur}</b></td><td><span class="badge">${pInfo}</span></td><td class="r mu">${tm(s.t)} ${role==="boss"?`<button class="x" onclick="delSale('${s.id}')">×</button>`:""}</td></tr>`;
             }).join("")}</table></div>` : `<p class="mu">${tr("noProd")}</p>`}
         </div>`;
     },
 
-    // NASIYA VA VOZVRAT
     debt() {
         return `<div class="g2">
             <div class="c">
@@ -1452,7 +1507,7 @@ const V = {
 };
 
 /* =========================================================
-   4. RENDER VA AUTH ("MEN PAROLNI UNUTDIM" BILAN)
+   4. RENDER VA AUTH
    ========================================================= */
 const langSelectHtml = () => `<select onchange="setLang(this.value)">
     <option value="uz" ${S.lang==="uz"?"selected":""}>🇺🇿 Oʻzbek</option>
@@ -1585,7 +1640,7 @@ function renderLogin() {
 }
 
 /* =========================================================
-   5. MANTIQIY FUNKSIYALAR
+   5. MANTIQIY FUNKSIYALAR VA KLAVIATURA NAVIGATSIYASI
    ========================================================= */
 function login() {
     const l = $("lg").value.trim(), p = $("pw").value.trim();
@@ -1657,7 +1712,6 @@ const go = t => { tab = t; render(); };
 const val = id => +($(id)?.value) || 0;
 const fail = m => { ERR = m; render(); };
 
-// RASM YUKLASH (XARID VA SKLAD UCHUN)
 function uploadBuyImg(input) {
     const file = input.files && input.files[0]; if (!file) return;
     const r = new FileReader(); r.onload = e => { tmpBuyImg = e.target.result; }; r.readAsDataURL(file);
@@ -1667,55 +1721,58 @@ function uploadWhImg(input) {
     const r = new FileReader(); r.onload = e => { tmpWhImg = e.target.result; }; r.readAsDataURL(file);
 }
 
-// YO'LDAGI PARTIYAGA KARGO BIRIKTIRISH VA SKLADGA KIRITISH
-function receiveBatchCargo(batchId) {
+// HAR BIR TOVARNI ALOHIDA KARGO VA VALYUTA BILAN SKLADGA QABUL QILISH
+function receiveSingleLotCargo(batchId, lotId) {
     const b = (S.batches || []).find(x => x.id == batchId);
-    if (!b) return;
-    const cgId = $("arrCg_" + batchId)?.value;
-    const whId = $("arrWh_" + batchId)?.value || "wh1";
-    const totalKg = val("arrKg_" + batchId);
-    const cargoCostCur = val("arrCost_" + batchId);
-    const cargoCostUZS = cargoCostCur * curRate();
+    const l = L(lotId);
+    if (!l) return;
+
+    const cgId = $("lCg_" + lotId)?.value;
+    const whId = $("lWh_" + lotId)?.value || "wh1";
+    const kg = val("lKg_" + lotId);
+    const cCur = $("lCur_" + lotId)?.value || buyPrefs.cargoCur || "USD";
+    buyPrefs.cargoCur = cCur;
+    localStorage.setItem(KEY + "-cargoCur", cCur);
+
+    const cargoCostCur = val("lCost_" + lotId);
+    const rt = S.rate[cCur] || 1;
+    const cargoCostUZS = cargoCostCur * rt;
 
     const cgObj = (S.sups || []).find(x => x.id == cgId);
     if (cgObj && cargoCostUZS > 0) {
         cgObj.debtUZS = (+cgObj.debtUZS || 0) + cargoCostUZS;
     }
 
-    b.status = "arrived";
-    b.cargoId = cgObj ? cgObj.id : "";
-    b.cargoName = cgObj ? cgObj.name : "Kargo";
-    b.totalKg = totalKg;
-    b.cargoCostUZS = cargoCostUZS;
+    l.status = "ready";
+    l.initWh = whId;
+    l.cargoId = cgObj ? cgObj.id : "";
+    l.cargoName = cgObj ? cgObj.name : "Kargo";
+    l.kg = kg;
+    l.cargoOrigTxt = `${cargoCostCur} ${cCur}`;
+    l.exp = cargoCostUZS > 0 ? [{ label: `${l.cargoName} (${kg} kg, ${cargoCostCur} ${cCur})`, amt: cargoCostUZS }] : [];
 
-    // Kargo xarajatini partiya ichidagi tovarlarga proporsional taqsimlab, Skladga kiritamiz
-    const batchLots = S.lots.filter(l => l.batchId === batchId);
-    const totalBatchPcs = batchLots.reduce((acc, l) => acc + (l.boxes * l.per), 0) || 1;
+    const uCost = unit(l);
+    const mR = l.mRet || buyPrefs.mRet || 25;
+    const mO = l.mOpt || buyPrefs.mOpt || 15;
+    const mB = l.mBox || buyPrefs.mBox || 10;
+    l.pRet = Math.round(uCost * (1 + mR / 100));
+    l.pOpt = Math.round(uCost * (1 + mO / 100));
+    l.pBox = Math.round(uCost * l.per * (1 + mB / 100));
 
-    batchLots.forEach(l => {
-        l.status = "ready";
-        l.initWh = whId;
-        l.cargoName = b.cargoName;
-        const pcs = l.boxes * l.per;
-        const shareRatio = pcs / totalBatchPcs;
-        l.kg = Math.round(totalKg * shareRatio * 10) / 10;
-        const lotCargoUZS = Math.round(cargoCostUZS * shareRatio);
-        if (lotCargoUZS > 0) {
-            l.exp = [{ label: `${b.cargoName} (${l.kg} kg)`, amt: lotCargoUZS }];
-        }
-        // Yangi tannarx asosida sotish narxlarini yangilaymiz
-        const uCost = unit(l);
-        const mR = l.mRet || 25, mO = l.mOpt || 15, mB = l.mBox || 10;
-        l.pRet = Math.round(uCost * (1 + mR / 100));
-        l.pOpt = Math.round(uCost * (1 + mO / 100));
-        l.pBox = Math.round(uCost * l.per * (1 + mB / 100));
-    });
+    if (b) {
+        b.cargoId = l.cargoId;
+        b.cargoName = l.cargoName;
+        b.totalKg = (+b.totalKg || 0) + kg;
+        b.cargoCostUZS = (+b.cargoCostUZS || 0) + cargoCostUZS;
+        const batchLots = (b.lotIds || []).map(id => L(id)).filter(Boolean);
+        if (batchLots.every(x => x.status !== "transit")) b.status = "arrived";
+    }
 
-    OK = `✅ Partiya «${b.cargoName}» orqali Skladga qabul qilindi!`;
+    OK = `✅ «${l.name}» (${l.cargoName}) Skladga qabul qilindi!`;
     save(); render();
 }
 
-// SKLAD BO'LIMIDA TAYYOR TOVARNI QO'SHISH FUNKSIYALARI
+// SKLADDA MAVJUD TAYYOR TOVARNI QO'SHISH VA KATAKLARNI 0 GA TUSHIRISH
 function calcDirectWhPrices() {
     const costCur = val("dwCost");
     if (costCur <= 0) return;
@@ -1728,33 +1785,46 @@ function calcDirectWhPrices() {
 
 function addDirectWhProduct() {
     const nm = $("dwNm")?.value.trim();
-    const bxCnt = val("dwBx"), perBx = val("dwPc");
+    const bxCnt = val("dwBx");
+    const perBx = val("dwPc");
+    const extraPcs = val("dwExtraPcs");
     const costCur = val("dwCost");
-    if (!nm || bxCnt <= 0 || perBx <= 0 || costCur <= 0) {
-        return fail("Tovar nomi, karobka/dona soni va kelgan narxini kiriting!");
+
+    const totPcs = (bxCnt * (perBx || 1)) + extraPcs;
+    if (!nm || totPcs <= 0 || costCur <= 0) {
+        return fail("Tovar nomi, soni (karobka yoki donalik qoldiq) va kelgan narxini kiriting!");
     }
+
+    const effectiveBoxes = bxCnt > 0 ? bxCnt : 0;
+    const effectivePer   = perBx > 0 ? perBx : (extraPcs > 0 ? extraPcs : 1);
+
     const rt = curRate();
-    const totPcs = bxCnt * perBx;
     const totalBuyUZS = costCur * rt * totPcs;
     const pRetUZS = (val("dwPRet") || costCur * 1.25) * rt;
     const pOptUZS = (val("dwPOpt") || costCur * 1.15) * rt;
-    const pBoxUZS = (val("dwPBox") || costCur * perBx * 1.1) * rt;
+    const pBoxUZS = (val("dwPBox") || costCur * effectivePer * 1.1) * rt;
 
     S.lots.push({
         id: uid(), status: "ready",
         name: nm, bc: $("dwBc")?.value.trim() || "", img: tmpWhImg || "",
         supName: "Mavjud zaxira", cargoName: "-",
         kg: 0, initWh: $("dwWh")?.value || "wh1",
-        boxes: bxCnt, per: perBx, buy: totalBuyUZS, exp: [],
+        boxes: effectiveBoxes, per: effectivePer, extraPcs: bxCnt > 0 ? extraPcs : extraPcs,
+        buy: totalBuyUZS, exp: [],
         pRet: Math.round(pRetUZS), pOpt: Math.round(pOptUZS), optMin: val("dwOptMin") || 5, pBox: Math.round(pBoxUZS), promo: 0
     });
+
     tmpWhImg = "";
-    showDirectWhAdd = false;
-    OK = `✅ «${nm}» Skladga muvaffaqiyatli qoʻshildi!`;
+    OK = `✅ «${nm}» (${totPcs} dona) Skladga saqlandi! Kataklar 0 ga tushirildi.`;
     save(); render();
+    // Saqlangandan so'ng barcha raqam kataklarini 0 ga tushiramiz
+    setTimeout(() => {
+        ["dwBx","dwPc","dwExtraPcs","dwCost","dwPRet","dwPOpt","dwPBox"].forEach(id => { if ($(id)) $(id).value = "0"; });
+        if ($("dwNm")) { $("dwNm").value = ""; $("dwNm").focus(); }
+        if ($("dwBc")) $("dwBc").value = "";
+    }, 30);
 }
 
-// MAGAZIN VA KARGOLAR BILAN ISHLASH (QO'SHISH, TO'LASH, O'CHIRISH)
 function addPartner() {
     const nm = $("newSpNm").value.trim(), tp = $("newSpTp").value;
     if (!nm) return fail(tr("newPartner"));
@@ -1792,7 +1862,6 @@ function delPartner(id) {
 }
 function delLot(id) { if (!confirm("Delete?")) return; S.lots = S.lots.filter(x => x.id != id); save(); render(); }
 
-// O'TKAZMA
 function moveBetweenLocs() {
     const l = L($("tl")?.value); if (!l) return;
     const fromId = $("mvFrom").value, toId = $("mvTo").value;
@@ -1818,7 +1887,7 @@ function setPromoLot(lotId) {
     OK = `🔥 ${l.name}: -${numPct}%`; save(); render();
 }
 
-// POS SOTUV
+// POS SOTUV VA SHTRIX-KOD QIDIRUVI
 let sMode = "auto", payType = "cash";
 function pickPos(id) { selLotId = id; if ($("sl")) $("sl").value = id; document.querySelectorAll(".pos-card").forEach(c => c.classList.remove("sel")); upd(); }
 function filterPos() {
@@ -1827,11 +1896,24 @@ function filterPos() {
         el.style.display = (el.dataset.nm.includes(q) || el.dataset.bc.includes(q)) ? "flex" : "none";
     });
 }
+function scanPosBarcode(code) {
+    const clean = (code || "").trim().toLowerCase();
+    if (!clean) return;
+    const curShop = (role === "sel" && USER?.loc && USER.loc !== "all") ? USER.loc : (activeLoc !== "all" ? activeLoc : null);
+    const found = S.lots.find(l => inMk(l, curShop) > 0 && (l.bc || "").toLowerCase() === clean);
+    if (found) {
+        pickPos(found.id);
+        posAddToCart();
+        if ($("posQ")) $("posQ").value = "";
+        filterPos();
+    }
+}
 function setSMode(m, btn) {
     sMode = m;
     document.querySelectorAll("#sModeSeg button").forEach(b => b.classList.remove("on"));
     btn.classList.add("on");
     if (m === "box" && (!val("sb") || val("sb") === 0)) { $("sb").value = 1; $("sp").value = 0; }
+    if ($("custBoxPos")) $("custBoxPos").style.display = (sMode === "opt" || sMode === "box" || payType === "debt") ? "block" : "none";
     upd();
 }
 function setPayType(pt, btn) {
@@ -1839,7 +1921,7 @@ function setPayType(pt, btn) {
     document.querySelectorAll("#payTypeSeg button").forEach(b => b.classList.remove("on"));
     btn.classList.add("on");
     if ($("mixBox")) $("mixBox").style.display = pt === "mix" ? "flex" : "none";
-    if ($("debtBox")) $("debtBox").style.display = pt === "debt" ? "block" : "none";
+    if ($("custBoxPos")) $("custBoxPos").style.display = (sMode === "opt" || sMode === "box" || payType === "debt") ? "block" : "none";
 }
 const qty = () => { const l = L($("sl")?.value); return l ? [l, val("sb") * l.per + val("sp")] : [null, 0]; };
 function upd() {
@@ -1856,6 +1938,7 @@ function tot2() {
 }
 
 function posAddToCart() {
+    if ($("selCustId")) posSelectedCustId = $("selCustId").value;
     const [l, q] = qty(); const p = val("spr"), disc = val("sdisc");
     if (!l || q <= 0 || p <= 0) return fail(tr("pcs") + "!");
     const curShop = (role === "sel" && USER?.loc && USER.loc !== "all") ? USER.loc : (activeLoc !== "all" ? activeLoc : "mk1");
@@ -1870,9 +1953,15 @@ function posAddToCart() {
 
 function sellMulti() {
     if (!posCart.length) return fail("Chek bo'sh!");
+    if ($("selCustId")) posSelectedCustId = $("selCustId").value;
     const curShop = (role === "sel" && USER?.loc && USER.loc !== "all") ? USER.loc : (activeLoc !== "all" ? activeLoc : "mk1");
     const grandTot = posCart.reduce((a, c) => a + c.tot, 0);
     let pCash = 0, pCard = 0, pDebt = 0;
+
+    const custObj = S.co.find(x => x.id == posSelectedCustId);
+    if ((sMode === "opt" || sMode === "box") && !custObj) {
+        return fail("Optim / Karobka sotuv uchun roʻyxatdan mijozni tanlang!");
+    }
 
     if (payType === "cash") pCash = grandTot;
     else if (payType === "card") pCard = grandTot;
@@ -1881,9 +1970,7 @@ function sellMulti() {
         if (pCash + pCard !== grandTot) return fail("Cash + Card ≠ Total!");
     } else if (payType === "debt") {
         pDebt = grandTot;
-        const custId = $("selCustId")?.value;
-        const c = S.co.find(x => x.id == custId);
-        if (c) c.debt = (+c.debt || 0) + grandTot;
+        if (custObj) custObj.debt = (+custObj.debt || 0) + grandTot;
         else return fail(tr("custSelect") + "!");
     }
 
@@ -1891,17 +1978,58 @@ function sellMulti() {
         const isFirst = idx === 0;
         S.sales.push({
             id: uid(), lot: item.lot, q: item.q, p: item.p, disc: item.disc, tot: item.tot,
+            custId: custObj ? custObj.id : "", custName: custObj ? custObj.name : "",
             pCash: isFirst ? pCash : 0, pCard: isFirst ? pCard : 0, pDebt: isFirst ? pDebt : 0,
             loc: curShop, by: role, t: Date.now()
         });
     });
 
     posCart = [];
-    OK = `✅ ${f(grandTot)} ${S.cur}`;
+    OK = `✅ ${f(grandTot)} ${S.cur} ${custObj ? '(' + custObj.name + ')' : ''}`;
     save(); render();
 }
 
-// KATALOG
+// KAMERA SHTRIX-KOD SKANERI FUNKSIYALARI
+let html5QrScanner = null;
+function openScanner(targetInputId) {
+    const m = $("scanModal");
+    if (!m) return;
+    m.classList.add("show");
+    if (typeof Html5Qrcode === "undefined") {
+        const manual = prompt("Shtrix-kodni kiriting:");
+        if (manual && $(targetInputId)) {
+            $(targetInputId).value = manual;
+            if (targetInputId === "posQ") scanPosBarcode(manual);
+        }
+        stopScanner();
+        return;
+    }
+    try {
+        html5QrScanner = new Html5Qrcode("scanReader");
+        html5QrScanner.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 240, height: 120 } },
+            (decodedText) => {
+                if ($(targetInputId)) {
+                    $(targetInputId).value = decodedText;
+                    if (targetInputId === "posQ") scanPosBarcode(decodedText);
+                }
+                stopScanner();
+            },
+            () => {}
+        ).catch(() => {});
+    } catch (e) {}
+}
+function stopScanner() {
+    const m = $("scanModal");
+    if (m) m.classList.remove("show");
+    if (html5QrScanner) {
+        try { html5QrScanner.stop().then(() => html5QrScanner.clear()).catch(() => {}); } catch (e) {}
+        html5QrScanner = null;
+    }
+}
+
+// KATALOG VA BUYURTMALAR
 function addCart(lotId) {
     const l = L(lotId); if (!l) return;
     const q = Math.max(1, +($("cq_" + lotId)?.value) || 1);
@@ -1942,6 +2070,7 @@ function shipOrder(ordId) {
         const isFirst = idx === 0;
         S.sales.push({
             id: uid(), lot: it.lot, q: it.q, p: it.p, disc: 0, tot: it.q * it.p,
+            custName: o.custName,
             pCash: isFirst ? o.pCash : 0, pCard: isFirst ? o.pCard : 0, pDebt: isFirst ? o.pDebt : 0,
             loc: "mk1", by: role, t: Date.now()
         });
@@ -2031,8 +2160,8 @@ function loadDemoLots() {
     if (S.lots.length === 0) {
         const id1 = uid(), id2 = uid();
         S.lots.push(
-            { id: id1, status: "ready", name: "Nike Air Zoom Krossovka", bc: "8901", img: "", supName: "Matiz Zavod", cargoName: "Fayzstar Cargo", kg: 120, initWh: "wh1", boxes: 10, per: 12, buy: 18000000, exp: [{label:"Fayzstar Cargo", amt:1200000}], pRet: 220000, pOpt: 190000, optMin: 5, pBox: 2160000, promo: 0 },
-            { id: id2, status: "ready", name: "Adidas Sport Kostyum", bc: "8902", img: "", supName: "Matiz Zavod", cargoName: "Fayzstar Cargo", kg: 95, initWh: "wh1", boxes: 8, per: 10, buy: 14000000, exp: [], pRet: 260000, pOpt: 230000, optMin: 4, pBox: 2200000, promo: 0 }
+            { id: id1, status: "ready", name: "Nike Air Zoom Krossovka", bc: "8901", img: "", supName: "Matiz Zavod", cargoName: "Fayzstar Cargo", kg: 120, initWh: "wh1", boxes: 10, per: 12, extraPcs: 0, buy: 18000000, exp: [{label:"Fayzstar Cargo", amt:1200000}], pRet: 220000, pOpt: 190000, optMin: 5, pBox: 2160000, promo: 0 },
+            { id: id2, status: "ready", name: "Adidas Sport Kostyum", bc: "8902", img: "", supName: "Matiz Zavod", cargoName: "Fayzstar Cargo", kg: 95, initWh: "wh1", boxes: 8, per: 10, extraPcs: 0, buy: 14000000, exp: [], pRet: 260000, pOpt: 230000, optMin: 4, pBox: 2200000, promo: 0 }
         );
         S.moves.push({ id: uid(), lot: id1, q: 36, from: "wh1", to: "mk1", t: Date.now(), by: "boss" });
         S.moves.push({ id: uid(), lot: id2, q: 20, from: "wh1", to: "mk1", t: Date.now(), by: "boss" });
@@ -2055,6 +2184,51 @@ function toggleBot(show) {
         </div>
     `;
 }
+
+/* =========================================================
+   6. GLOBAL KLAVIATURA BOSHQARUVI (STRELKALAR: O'NG/CHAP/PAST/TEPA VA ENTER)
+   ========================================================= */
+document.addEventListener("keydown", function(e) {
+    const el = document.activeElement;
+    if (!el || !["INPUT", "SELECT", "TEXTAREA"].includes(el.tagName)) return;
+
+    const card = el.closest(".c, .modal-c") || document.body;
+    const inputs = Array.from(card.querySelectorAll("input:not([type=hidden]):not([type=file]):not([disabled]):not([readonly]), select:not([disabled])"))
+        .filter(x => x.offsetParent !== null);
+    const idx = inputs.indexOf(el);
+
+    if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (idx >= 0 && idx < inputs.length - 1) { inputs[idx + 1].focus(); if (inputs[idx + 1].select) inputs[idx + 1].select(); }
+    } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (idx > 0) { inputs[idx - 1].focus(); if (inputs[idx - 1].select) inputs[idx - 1].select(); }
+    } else if (e.key === "ArrowRight") {
+        const isAtEnd = (el.tagName === "SELECT" || el.type === "number" || el.selectionStart === null || el.selectionStart === (el.value || "").length);
+        if (isAtEnd && idx >= 0 && idx < inputs.length - 1) {
+            e.preventDefault();
+            inputs[idx + 1].focus();
+            if (inputs[idx + 1].select) inputs[idx + 1].select();
+        }
+    } else if (e.key === "ArrowLeft") {
+        const isAtStart = (el.tagName === "SELECT" || el.type === "number" || el.selectionStart === null || el.selectionStart === 0);
+        if (isAtStart && idx > 0) {
+            e.preventDefault();
+            inputs[idx - 1].focus();
+            if (inputs[idx - 1].select) inputs[idx - 1].select();
+        }
+    } else if (e.key === "Enter") {
+        if (el.id === "posQ") return;
+        e.preventDefault();
+        if (idx >= 0 && idx < inputs.length - 1) {
+            inputs[idx + 1].focus();
+            if (inputs[idx + 1].select) inputs[idx + 1].select();
+        } else {
+            const btn = card.querySelector("button.b:not(.b-out):not(.b-bad)") || card.querySelector("button.b");
+            if (btn) btn.click();
+        }
+    }
+});
 
 render();
 loadFromSupabase();
