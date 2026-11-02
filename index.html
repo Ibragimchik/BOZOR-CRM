@@ -1,13 +1,12 @@
 <!doctype html>
 <html lang="uz">
 <head>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Bozor hisobi — SaaS</title>
-<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;600;800&display=swap" rel="stylesheet">
-<style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Bozor hisobi — SaaS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
     :root {
       --bg: #0f172a;
       --sf: #1e293b;
@@ -74,7 +73,11 @@
     .modal-bg.show{display:flex}
     .modal-c{background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:18px;max-width:440px;width:100%}
     .calc-box{background:#0b1120;border:1px dashed var(--ac);border-radius:12px;padding:12px;margin:10px 0}
-</style>
+    .batch-btn{width:100%;text-align:left;background:#0b1120;border:1px solid var(--ln);border-radius:10px;padding:11px 14px;color:var(--ink);font:600 14px Onest,system-ui,sans-serif;cursor:pointer;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;transition:0.2s}
+    .batch-btn:hover{border-color:var(--ac);background:rgba(59,130,246,0.08)}
+    .partner-link{cursor:pointer;color:var(--ac);text-decoration:underline;font-weight:800}
+    .partner-link:hover{color:#60a5fa}
+  </style>
 </head>
 <body>
 
@@ -88,11 +91,21 @@
 </div>
 
 <script>
-
+/* =========================================================
+   0. SUPABASE XATOSIZ ULANISH (SYNTAX ERROR BERMAYDI)
+   ========================================================= */
 const supabaseUrl = 'https://lokihgywgmlgejxsmhuu.supabase.co';
 const supabaseKey = 'sb_publishable_Zks7tBKSRvREFzIFYZYjjA_Vu2PMxvc';
 
-const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+let supabaseClient = null;
+try {
+    if (window.supabase && typeof window.supabase.createClient === "function") {
+        supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+        window.supabaseClient = supabaseClient;
+    }
+} catch (e) {
+    console.warn("Supabase init warning:", e);
+}
 
 /* =========================================================
    1. TO'LIQ 7 TILLI LUG'AT (UZ, KG, RU, EN, ZH, KZ, TJ)
@@ -105,7 +118,7 @@ const I18N = {
         role_boss:"Boshliq", role_man:"Menejer", role_sel:"Sotuvchi", role_cust:"Xaridor",
         stWh:"Skladdagi tovar (tannarx)", stMk:"Bozordagi tovar (tannarx)", stRev:"Jami savdo", stProf:"Sof Foyda", stCash:"Naqd Kassa", stCard:"Kartadagi pul", stDebt:"Mijozlardagi Nasiya", stSupDebt:"Zavod/Kargodan Qarzimiz", stExp:"Bozor xarajatlari", stHand:"Topshirilgan pul",
         startImp:"Boshlash uchun «Sotib olish» boʻlimida birinchi partiyani kiriting.", statTitle:"📊 Savdo Statistikasi", disc:"Chegirmalar", lotsCnt:"Partiyalar", salesCnt:"Cheklar",
-        box:"karobka", pcs:"dona", prRet:"Dona narx", prOpt:"Optim narx", prBox:"Karobka narx",
+        box:"karobka", pcs:"dona", prRet:"Dona narx", prOpt:"Optim narx", prBox:"Karobka narx", optMin:"Optim min. dona",
         impNew:"🛍️ Tovar Sotib Olish & Tannarx Kalkulyatori", supTitle:"🏭 Zavod / Magazin va Kargo Qarzlari", supName:"Kimdan olindi (Zavod / Magazin)", cargoName:"Kargo / Ombor", newPartner:"Yoki yangi nom...",
         prodName:"Tovar nomi", barcode:"Shtrix-kod / Kod", prodImg:"Tovar rasmi (Fayldan tanlash)", boxCnt:"Karobka soni", perBox:"1 karobkada dona",
         buyCur:"Valyuta", buyPriceUnit:"Xarid narxi (1 dona)", buyTotalCur:"Jami summa",
@@ -132,7 +145,7 @@ const I18N = {
         role_boss:"Башчы", role_man:"Менеджер", role_sel:"Сатуучу", role_cust:"Кардар",
         stWh:"Складдагы товар (тан наркы)", stMk:"Базардагы товар (тан наркы)", stRev:"Жалпы сатуу", stProf:"Таза Пайда", stCash:"Накталай Касса", stCard:"Картадагы акча", stDebt:"Кардарлардагы Насия", stSupDebt:"Завод/Каргого Карызыбыз", stExp:"Базар чыгымдары", stHand:"Тапшырылган акча",
         startImp:"Баштоо үчүн «Сатып алуу» бөлүмүнөн биринчи партияны киргизиңиз.", statTitle:"📊 Сатуу Статистикасы", disc:"Арзандатуулар", lotsCnt:"Партиялар", salesCnt:"Чектер",
-        box:"коробка", pcs:"даана", prRet:"Даана баасы", prOpt:"Оптом баасы", prBox:"Коробка баасы",
+        box:"коробка", pcs:"даана", prRet:"Даана баасы", prOpt:"Оптом баасы", prBox:"Коробка баасы", optMin:"Оптом мин. даана",
         impNew:"🛍️ Товар Сатып Алуу & Тан нарк Калькулятору", supTitle:"🏭 Завод / Магазин жана Карго Карыздары", supName:"Кимден алынды (Завод / Магазин)", cargoName:"Карго / Склад", newPartner:"Же жаңы ат...",
         prodName:"Товардын аты", barcode:"Штрих-код", prodImg:"Товар сүрөтү (Файлдан тандоо)", boxCnt:"Коробка саны", perBox:"1 коробкада даана",
         buyCur:"Валюта", buyPriceUnit:"Сатып алуу баасы (1 даана)", buyTotalCur:"Жалпы сумма",
@@ -159,7 +172,7 @@ const I18N = {
         role_boss:"Босс", role_man:"Менеджер", role_sel:"Продавец", role_cust:"Покупатель",
         stWh:"Товар на складе (себест.)", stMk:"Товар в магазине (себест.)", stRev:"Общая выручка", stProf:"Чистая Прибыль", stCash:"Наличная Касса", stCard:"На карте", stDebt:"Долги клиентов", stSupDebt:"Наш долг Заводам/Карго", stExp:"Расходы точки", stHand:"Сдано боссу",
         startImp:"Для начала добавьте первую партию в разделе «Закуп товара».", statTitle:"📊 Статистика Продаж", disc:"Скидки", lotsCnt:"Партий", salesCnt:"Чеков",
-        box:"короб.", pcs:"шт", prRet:"Розничная", prOpt:"Оптовая", prBox:"За коробку",
+        box:"короб.", pcs:"шт", prRet:"Розничная", prOpt:"Оптовая", prBox:"За коробку", optMin:"Опт мин. шт",
         impNew:"🛍️ Закуп Товара и Калькулятор Себестоимости", supTitle:"🏭 База Заводов и Карго (Наши Долги)", supName:"У кого купили (Завод / Магазин)", cargoName:"Карго / Склад", newPartner:"Или новое имя...",
         prodName:"Название товара", barcode:"Штрих-код", prodImg:"Фото товара (Файл)", boxCnt:"Кол-во коробок", perBox:"Штук в коробке",
         buyCur:"Валюта", buyPriceUnit:"Цена закупа (1 шт)", buyTotalCur:"Сумма",
@@ -186,7 +199,7 @@ const I18N = {
         role_boss:"Boss", role_man:"Manager", role_sel:"Seller", role_cust:"Customer",
         stWh:"Warehouse Stock (Cost)", stMk:"Store Stock (Cost)", stRev:"Total Sales", stProf:"Net Profit", stCash:"Cash Balance", stCard:"Card Balance", stDebt:"Customer Debts", stSupDebt:"Payables to Suppliers", stExp:"Store Expenses", stHand:"Handed Over",
         startImp:"To start, add your first batch in the Purchasing section.", statTitle:"📊 Sales Statistics", disc:"Discounts", lotsCnt:"Batches", salesCnt:"Receipts",
-        box:"boxes", pcs:"pcs", prRet:"Retail", prOpt:"Wholesale", prBox:"Box Price",
+        box:"boxes", pcs:"pcs", prRet:"Retail", prOpt:"Wholesale", prBox:"Box Price", optMin:"Min Wholesale Pcs",
         impNew:"🛍️ Product Purchasing & Landed Cost Calculator", supTitle:"🏭 Suppliers & Cargo Payables", supName:"Supplier / Factory", cargoName:"Cargo / Warehouse", newPartner:"Or new name...",
         prodName:"Product Name", barcode:"Barcode / SKU", prodImg:"Product Photo (File)", boxCnt:"Box Count", perBox:"Pcs per Box",
         buyCur:"Currency", buyPriceUnit:"Buy Price (per 1 pc)", buyTotalCur:"Total Amount",
@@ -213,7 +226,7 @@ const I18N = {
         role_boss:"老板", role_man:"经理", role_sel:"销售员", role_cust:"买家",
         stWh:"仓库库存 (成本)", stMk:"门店库存 (成本)", stRev:"总销售额", stProf:"净利润", stCash:"现金余额", stCard:"银行卡", stDebt:"客户欠款", stSupDebt:"应付供应商欠款", stExp:"门店支出", stHand:"已交老板",
         startImp:"请先在“采购入库”页面添加第一批货物。", statTitle:"📊 销售统计", disc:"折扣", lotsCnt:"批次", salesCnt:"单据",
-        box:"箱", pcs:"件", prRet:"零售价", prOpt:"批发价", prBox:"整箱价",
+        box:"箱", pcs:"件", prRet:"零售价", prOpt:"批发价", prBox:"整箱价", optMin:"批发最低件数",
         impNew:"🛍️ 采购入库与成本核算器", supTitle:"🏭 厂家与物流应付账款", supName:"供应商 / 厂家", cargoName:"物流 / 仓库", newPartner:"或新名称...",
         prodName:"商品名称", barcode:"条形码", prodImg:"商品图片 (文件)", boxCnt:"箱数", perBox:"每箱件数",
         buyCur:"币种", buyPriceUnit:"采购单价", buyTotalCur:"总金额",
@@ -235,16 +248,16 @@ const I18N = {
     },
     kz: {
         home:"Басты бет", buy:"Сатып алу", trf:"Көшіру", wh:"Қойма", mk:"Сату (POS)", ord:"Тапсырыстар", cat:"Каталог", cash:"Касса", debt:"Клиент & Қарыз", staff:"Қойма & Штат", sub:"Жазылым", prof:"Профиль", bot:"Бот", lock:"Шығу",
-        login:"Кирүү", reg:"Жаңа Дүкен", custReg:"Сатып алушы тіркелуі", bioBtn:"🫆 Саусақ ізімен (PIN) кіру",
-        allLocs:"🌐 Барлық нүктелер", mainWh:"Негізгі Қойма", mainMk:"1-Дүкен (Негізгий)",
+        login:"Кіру", reg:"Жаңа Дүкен", custReg:"Сатып алушы тіркелуі", bioBtn:"🫆 Саусақ ізімен (PIN) кіру",
+        allLocs:"🌐 Барлық нүктелер", mainWh:"Негізгі Қойма", mainMk:"1-Дүкен (Негізгі)",
         role_boss:"Басшы", role_man:"Менеджер", role_sel:"Сатушы", role_cust:"Сатып алушы",
         stWh:"Қоймадағы тауар (өзіндік құны)", stMk:"Дүкендегі тауар (өзіндік құны)", stRev:"Жалпы сатылым", stProf:"Таза Пайда", stCash:"Қолма-қол Касса", stCard:"Картадағы ақша", stDebt:"Клиенттер қарызы", stSupDebt:"Зауыт/Каргоға Қарызымыз", stExp:"Дүкен шығындары", stHand:"Тапсырылған ақша",
         startImp:"Бастау үшін «Сатып алу» бөлімінде бірінші партияны енгізіңіз.", statTitle:"📊 Сату Статистикасы", disc:"Жеңілдіктер", lotsCnt:"Партиялар", salesCnt:"Чектер",
-        box:"қорап", pcs:"дана", prRet:"Бөлшек баға", prOpt:"Көтерме баға", prBox:"Қорап бағасы",
+        box:"қорап", pcs:"дана", prRet:"Бөлшек баға", prOpt:"Көтерме баға", prBox:"Қорап бағасы", optMin:"Көтерме мин. дана",
         impNew:"🛍️ Тауар Сатып Алу және Өзіндік Құн Калькуляторы", supTitle:"🏭 Зауыт және Карго Қарыздары", supName:"Кімнен алынды (Зауыт)", cargoName:"Карго / Қойма", newPartner:"Немесе жаңа ат...",
         prodName:"Тауар атауы", barcode:"Штрих-код", prodImg:"Тауар суреті (Файл)", boxCnt:"Қорап саны", perBox:"1 қорапта дана",
         buyCur:"Валюта", buyPriceUnit:"Сатып алу бағасы (1 дана)", buyTotalCur:"Жалпы сома",
-        totKg:"Салмак (кг)", pricePerKg:"1 кг карго бағасы", cargoTotal:"Жалпы Карго",
+        totKg:"Салмақ (кг)", pricePerKg:"1 кг карго бағасы", cargoTotal:"Жалпы Карго",
         otherExp:"Қосымша шығын", calcUnitCost:"📌 1 дана нақты Өзіндік құны",
         mrgRet:"Бөлшек пайда (%)", mrgOpt:"Көтерме пайда (%)", mrgBox:"Қорап пайдасы (%)",
         addLotBtn:"➕ Сатып алуды Сақтау және Қоймаға Енгізу", costBase:"Өзіндік құн", extraExp:"Қосымша шығын", amt:"Сома", addBtn:"Қосу", totCost:"Жалпы Өзіндік құн",
@@ -252,8 +265,8 @@ const I18N = {
         mvTitle:"🔄 Көшіру (Қойма мен Дүкендер арасында)", fromLoc:"Қайдан", toLoc:"Қайда", selProd:"Тауарды таңдаңыз", confirmMv:"✅ Көшіруді растау", mvHist:"📜 Соңғы Көшірулер", time:"Уақыт",
         posProds:"🛒 Дүкендегі Тауарлар", searchPh:"🔍 Атауы немесе штрих-код...", posTerm:"🧾 Касса Терминалы (Мульти-чек)", saleMode:"Сату режимі", auto:"Авто", unitPr:"1 дана бағасы", finalSum:"Қорытынды сома", payMethod:"Төлем түрі", cashPay:"💵 Қолма-қол", cardPay:"💳 Карта", mixPay:"🔄 Аралас", debtPay:"📒 Қарызға", custSelect:"Клиентті таңдаңыз", newCustName:"Жаңа клиент аты", addCartBtn:"➕ Тізімге Қосу", finishSale:"✅ Сатуды Аяқтау",
         catTitle:"🛍️ Дүкен Каталогы", cartTitle:"🧺 Себет және Тапсырыс", addToCart:"➕ Себетке", emptyCart:"Себет бос", sendOrd:"🚀 Тапсырыс Жіберу", myOrds:"📦 Менің Тапсырыстарым",
-        ordTitle:"📦 Сатып алушы Тапсырыстарын Қабылдау", noOrds:"Жаңа тапсырыстар жоқ.", ordWait:"⏳ Күтілуде", ordPaid:"💳 Төлем расталды", ordSent:"✅ Жиберилди", confirmPay:"1. Төлем / Қарызды Растау", sendProdBtn:"2. 🚚 Тауарды Жібердік", paidCashLbl:"Алынған Қолма-қол", paidCardLbl:"Алынған Карта", remDebtLbl:"Қалған Қарыз",
-        handTitle:"🤝 Басшыға ақша тапсыру", fromWallet:"Қай әмияннан?", note:"Ескертпе", handBtn:"✅ Тапсырылды", mktExpTitle:"💸 Дүкен шығындары", reason:"Себеби", expBtn:"➖ Шығыс ету", lastSales:"🧾 Соңғы Сатылымдар",
+        ordTitle:"📦 Сатып алушы Тапсырыстарын Қабылдау", noOrds:"Жаңа тапсырыстар жоқ.", ordWait:"⏳ Күтілуде", ordPaid:"💳 Төлем расталды", ordSent:"✅ Жіберілді", confirmPay:"1. Төлем / Қарызды Растау", sendProdBtn:"2. 🚚 Тауарды Жібердік", paidCashLbl:"Алынған Қолма-қол", paidCardLbl:"Алынған Карта", remDebtLbl:"Қалған Қарыз",
+        handTitle:"🤝 Басшыға ақша тапсыру", fromWallet:"Қай әмияннан?", note:"Ескертпе", handBtn:"✅ Тапсырылды", mktExpTitle:"💸 Дүкен шығындары", reason:"Себебі", expBtn:"➖ Шығыс ету", lastSales:"🧾 Соңғы Сатылымдар",
         debtList:"📒 Клиенттер мен Қарыздар Дәптері", addCustTitle:"👤 Жаңа Сатып алушы Қосу", remDebt:"Қалған қарыз", payBtn:"Төлеу / Алынды", closed:"Жабылған", retTitle:"🔄 Тауар Қайтару (Возврат)", retQty:"Қайтарылған дана", retBtn:"🔄 Қайтаруды рәсімдеу",
         myLocs:"🏢 Қойма мен Дүкендер", locName:"Нүкте атауы", type:"Түрі", shop:"🏪 Дүкен", warehouse:"🏭 Қойма", addStaffTitle:"👥 Жаңа Қызметкер Қосу", staffList:"📋 Қызметкерлер Тізімі",
         subPlan:"Ағымдағы Тариф", remDays:"Қалған Күндер", bonusDays:"Бонус Күндер", days:"күн", extSub:"💳 Жазылымды Ұзарту", refTitle:"🎁 Промокод және Достарды Шақыру", copy:"📋 Көшіру", share:"📤 Бөлісу",
@@ -267,7 +280,7 @@ const I18N = {
         role_boss:"Роҳбар", role_man:"Менеҷер", role_sel:"Фурӯшанда", role_cust:"Харидор",
         stWh:"Моли анбор (арзиши аслӣ)", stMk:"Моли дӯкон (арзиши аслӣ)", stRev:"Фурӯши умумӣ", stProf:"Фоидаи Соф", stCash:"Нақди Хазина", stCard:"Дар корт", stDebt:"Қарзи мизоҷон", stSupDebt:"Қарзи мо аз Завод/Карго", stExp:"Хароҷоти бозор", stHand:"Супорида шуд",
         startImp:"Барои оғоз дар қисми «Харид» партияи аввалро ворид кунед.", statTitle:"📊 Омори Фурӯш", disc:"Тахфифҳо", lotsCnt:"Партияҳо", salesCnt:"Чекҳо",
-        box:"қуттӣ", pcs:"дона", prRet:"Нархи дона", prOpt:"Нархи яклухт", prBox:"Нархи қуттӣ",
+        box:"қуттӣ", pcs:"дона", prRet:"Нархи дона", prOpt:"Нархи яклухт", prBox:"Нархи қуттӣ", optMin:"Мин. яклухт",
         impNew:"🛍️ Хариди Мол ва Ҳисобкунаки Арзиши Аслӣ", supTitle:"🏭 Рӯйхати Завод ва Карго (Қарзҳои Мо)", supName:"Аз кӣ харида шуд (Завод)", cargoName:"Карго / Анбор", newPartner:"Ё номи нав...",
         prodName:"Номи мол", barcode:"Штрих-код", prodImg:"Расми мол (Файл)", boxCnt:"Шумораи қуттӣ", perBox:"Дона дар 1 қуттӣ",
         buyCur:"Асъор", buyPriceUnit:"Нархи харид (1 дона)", buyTotalCur:"Маблағи умумӣ",
@@ -290,7 +303,7 @@ const I18N = {
 };
 
 /* =========================================================
-   2. BAZA VA DOIMIY XOTIRA
+   2. BAZA, SUPABASE SINXRONIZATSIYA VA DOIMIY XOTIRA
    ========================================================= */
 const KEY = "bozor-hisobi-v1";
 const PREF_LANG = localStorage.getItem(KEY + "-lang") || "uz";
@@ -303,9 +316,10 @@ let S = {
         { id: "mk1", name: "1-Doʻkon (Asosiy)", type: "mk" }
     ],
     sups: [
-        { id: "sp1", name: "Matiz Zavod / Magazin", type: "sup", debtUZS: 0 },
-        { id: "cg1", name: "Fayzstar Cargo (Ombor)", type: "cargo", debtUZS: 0 }
+        { id: "sp1", name: "Matiz Zavod / Magazin", type: "sup", debtUZS: 0, payments: [] },
+        { id: "cg1", name: "Fayzstar Cargo (Ombor)", type: "cargo", debtUZS: 0, payments: [] }
     ],
+    batches: [], // Zavoddan sotib olingan partiyalar (chislo bo'yicha ro'yxat, yo'lda yoki yetib kelgan)
     lots: [], moves: [], sales: [], hand: [], mexp: [],
     users: [], co: [], ord: [], cart: [],
     rate: { UZS: 1, KGS: 145, USD: 12600, CNY: 1750, RUB: 135, KZT: 26, TJS: 1150 },
@@ -321,9 +335,11 @@ try {
         S = Object.assign(S, parsed);
         if (!S.locs || !S.locs.length) S.locs = [{ id: "wh1", name: "Asosiy Sklad", type: "wh" }, { id: "mk1", name: "1-Doʻkon (Asosiy)", type: "mk" }];
         if (!S.sups || !S.sups.length) S.sups = [
-            { id: "sp1", name: "Matiz Zavod / Magazin", type: "sup", debtUZS: 0 },
-            { id: "cg1", name: "Fayzstar Cargo (Ombor)", type: "cargo", debtUZS: 0 }
+            { id: "sp1", name: "Matiz Zavod / Magazin", type: "sup", debtUZS: 0, payments: [] },
+            { id: "cg1", name: "Fayzstar Cargo (Ombor)", type: "cargo", debtUZS: 0, payments: [] }
         ];
+        S.sups.forEach(sp => { if (!sp.payments) sp.payments = []; });
+        if (!S.batches) S.batches = [];
         if (!S.mexp) S.mexp = [];
         if (!S.co) S.co = [];
         if (!S.ord) S.ord = [];
@@ -337,11 +353,40 @@ if (localStorage.getItem(KEY + "-lang")) S.lang = localStorage.getItem(KEY + "-l
 if (localStorage.getItem(KEY + "-cur"))  S.cur  = localStorage.getItem(KEY + "-cur");
 
 const $ = id => document.getElementById(id);
+
+async function syncToSupabase() {
+    if (!supabaseClient) return;
+    try {
+        await supabaseClient.from('crm_state').upsert({
+            shop_id: S.brand.shopId || "default",
+            data: S,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'shop_id' });
+    } catch (e) {}
+}
+
+async function loadFromSupabase() {
+    if (!supabaseClient) return;
+    try {
+        const { data, error } = await supabaseClient
+            .from('crm_state')
+            .select('data')
+            .eq('shop_id', S.brand.shopId || "default")
+            .maybeSingle();
+        if (!error && data && data.data) {
+            S = Object.assign(S, data.data);
+            localStorage.setItem(KEY, JSON.stringify(S));
+            render();
+        }
+    } catch (e) {}
+}
+
 const save = () => {
     try {
         localStorage.setItem(KEY, JSON.stringify(S));
         localStorage.setItem(KEY + "-lang", S.lang);
         localStorage.setItem(KEY + "-cur", S.cur);
+        syncToSupabase();
     } catch(e) {}
 };
 const setLang = l => { S.lang = l; localStorage.setItem(KEY + "-lang", l); save(); render(); };
@@ -376,6 +421,10 @@ if (!S.users || S.users.length === 0) {
 }
 
 let USER = null, role = "boss", tab = "home", ERR = "", OK = "", activeLoc = "all", authMode = "login", selLotId = "";
+let activePartnerId = null; // Tanlangan zavod yoki kargo ichiga kirish uchun
+let openBatchId = null;     // Zavod ichida bosilgan chislo (partiya)ni ochish uchun
+let showDirectWhAdd = false; // Sklad bo'limida tayyor tovar qo'shish oynasini ochish/yopish
+
 try { USER = S.users.find(u => u.id == localStorage.getItem(KEY + "-u")) || null; } catch(e) {}
 if (USER) {
     role = USER.role;
@@ -393,6 +442,7 @@ const unit = l => tot(l) > 0 ? cost(l) / tot(l) : 0;
 const sold = (l, locId) => sum(S.sales.filter(s => s.lot == l.id && (!locId || s.loc == locId)), "q");
 
 const inLoc = (l, locId) => {
+    if (l.status === "transit") return 0; // Yo'ldagi tovar hali skladda emas
     const startWh = l.initWh || "wh1";
     let q = (locId === startWh) ? tot(l) : 0;
     S.moves.forEach(m => {
@@ -407,12 +457,14 @@ const inLoc = (l, locId) => {
 };
 
 const inWh = (l, whId) => {
+    if (l.status === "transit") return 0;
     const whs = S.locs.filter(x => x.type === "wh");
     if (whId && whId !== "all") return inLoc(l, whId);
     return whs.reduce((acc, w) => acc + inLoc(l, w.id), 0);
 };
 
 const inMk = (l, mkId) => {
+    if (l.status === "transit") return 0;
     const mks = S.locs.filter(x => x.type === "mk");
     if (mkId && mkId !== "all") {
         const locObj = S.locs.find(x => x.id == mkId);
@@ -494,8 +546,10 @@ function calcWallets() {
    3. BARCHA SAHIFALAR (VIEWS)
    ========================================================= */
 let tmpBuyImg = "";
+let tmpWhImg = "";
 let posCart = []; // POS savdo uchun ko'p tovarli vaqtinchalik ro'yxat
-let buyCart = []; // Vaqtinchalik savatcha (obyekt tashqarisida)
+let buyCart = []; // Zavoddan sotib olishda tovarlar ketma-ketligi savatchasi
+
 const V = {
     home() {
         const W = calcWallets();
@@ -521,40 +575,177 @@ const V = {
         </div>` : `<div class="c">${tr("startImp")}</div>`);
     },
 
-    // SOTIB OLISH (Zavodga ketma-ket tovar qo'shish va qarzga yozish)
-
-
-    
+    // SOTIB OLISH BO'LIMI (1-qatorda faqat Magazin nomi, ketma-ketlik, "Sotib oldim", O'ng tomonda Magazin va Kargo ichiga kirish, o'chirish, yo'ldagi tovarni kargoga biriktirish)
     buy() {
-
         const sups = (S.sups || []).filter(x => x.type !== "cargo");
+        const cargos = (S.sups || []).filter(x => x.type === "cargo");
         const whs = S.locs.filter(x => x.type === "wh");
         const cartTot = buyCart.reduce((a, c) => a + c.totCur, 0);
 
+        // O'ng tomonda Magazin yoki Kargo ichiga kirilgan holat
+        let rightSideHtml = "";
+        const partner = activePartnerId ? (S.sups || []).find(x => x.id == activePartnerId) : null;
+
+        if (partner) {
+            const isCargo = partner.type === "cargo";
+            const partnerBatches = (S.batches || []).filter(b => isCargo ? b.cargoId === partner.id : b.supId === partner.id).slice().reverse();
+            const payments = (partner.payments || []).slice().reverse();
+
+            rightSideHtml = `<div class="c">
+                <h3>
+                    <span>${isCargo ? '🚚' : '🏭'} ${esc(partner.name)}</span>
+                    <button class="b b-sm b-out" onclick="activePartnerId=null;openBatchId=null;render()">⬅️ Orqaga (Roʻyxatga)</button>
+                </h3>
+                <div class="c" style="background:#0b1120;margin-bottom:12px;padding:12px">
+                    <div class="mu">Joriy qolgan qarzimiz:</div>
+                    <div class="big" style="color:${partner.debtUZS>0?'var(--bad)':'var(--ok)'}">${f(partner.debtUZS||0)} <small>${S.cur}</small></div>
+                    <div class="row" style="margin-top:10px;margin-bottom:0">
+                        <input id="inPayAmt" type="number" placeholder="Toʻlanayotgan summa (${S.cur})">
+                        <input id="inPayNote" placeholder="Izoh (masalan: Alipay / Naqd)">
+                        <button class="b b-ok" onclick="payInsidePartner('${partner.id}')">💸 Pul topshirish / Toʻlash</button>
+                    </div>
+                </div>
+
+                <h4>📅 ${isCargo ? 'Kargo orqali kelgan partiyalar (Chislo boʻyicha)' : 'Sotib olingan partiyalar (Chislo ustiga bosing)'}</h4>
+                ${partnerBatches.length ? partnerBatches.map(b => {
+                    const isOpen = openBatchId === b.id;
+                    const isArrived = b.status === "arrived";
+                    return `<div style="margin-bottom:10px">
+                        <button class="batch-btn" onclick="openBatchId=(openBatchId==='${b.id}'?null:'${b.id}');render()">
+                            <span>📅 <b>${tm(b.t)}</b> — ${b.items.length} xil tovar (${b.totCur} ${b.cur})</span>
+                            <span class="badge ${isArrived?'badge-ok':'badge-tp'}">${isArrived ? '✅ Skladga kelgan' : '🚚 Yoʻlda (Kutilmoqda)'} ${isOpen ? '▲' : '▼'}</span>
+                        </button>
+                        ${isOpen ? `<div class="c" style="background:#0b1120;margin-top:-4px;border-color:var(--ac)">
+                            <div class="tw"><table>
+                                <tr><th>#</th><th>Tovar</th><th>Karobka / Dona</th><th>Narxi</th><th class="r">Jami</th></tr>
+                                ${b.items.map((it, idx) => `<tr>
+                                    <td>${idx + 1}</td>
+                                    <td><b>${esc(it.name)}</b></td>
+                                    <td>${it.boxes} karobka × ${it.per} = <b>${it.boxes * it.per} dona</b></td>
+                                    <td>${it.buyUnitCur} ${b.cur}</td>
+                                    <td class="r"><b>${it.totCur} ${b.cur}</b></td>
+                                </tr>`).join("")}
+                            </table></div>
+                            ${!isArrived ? `
+                                <div class="calc-box">
+                                    <h4 style="margin:0 0 8px;color:var(--tp)">🚚 Kargo biriktirish va Skladga qabul qilish</h4>
+                                    <div class="row">
+                                        <label>Qaysi Kargodan keldi?
+                                            <select id="arrCg_${b.id}">
+                                                ${cargos.map(c=>`<option value="${c.id}">🚚 ${esc(c.name)}</option>`).join("")}
+                                            </select>
+                                        </label>
+                                        <label>Qaysi Skladga tushadi?
+                                            <select id="arrWh_${b.id}">
+                                                ${whs.map(w=>`<option value="${w.id}">🏭 ${esc(locTitle(w))}</option>`).join("")}
+                                            </select>
+                                        </label>
+                                    </div>
+                                    <div class="row">
+                                        <label>Jami ogʻirligi (kg)<input id="arrKg_${b.id}" type="number" step="any" placeholder="Masalan: 120"></label>
+                                        <label>Kargo puli (${S.cur} da)<input id="arrCost_${b.id}" type="number" step="any" placeholder="Jami kargo summasi"></label>
+                                    </div>
+                                    <button class="b b-ok" style="width:100%;margin-top:6px" onclick="receiveBatchCargo('${b.id}')">✅ Kargoni saqlash va Tovarlarni Skladga kiritish</button>
+                                </div>
+                            ` : `
+                                <div class="mu" style="padding:6px 0">
+                                    🚚 Kargo: <b>${esc(b.cargoName || "-")}</b> | ⚖️ Jami vazn: <b>${b.totalKg || 0} kg</b> | 💰 Kargo puli: <b>${f(b.cargoCostUZS || 0)} ${S.cur}</b>
+                                </div>
+                            `}
+                        </div>` : ""}
+                    </div>`;
+                }).join("") : `<p class="mu">Hali partiyalar yoʻq.</p>`}
+
+                <h4 style="margin-top:16px">🧾 Toʻlangan pullar tarixi</h4>
+                ${payments.length ? `<div class="tw"><table>
+                    <tr><th>Chislo / Vaqt</th><th>Toʻlangan summa</th><th>Izoh</th></tr>
+                    ${payments.map(p => `<tr>
+                        <td class="mu">${tm(p.t)}</td>
+                        <td><b style="color:var(--ok)">${f(p.amtUZS)} ${S.cur}</b></td>
+                        <td>${esc(p.note || "-")}</td>
+                    </tr>`).join("")}
+                </table></div>` : `<p class="mu">Hali toʻlov qilinmagan.</p>`}
+            </div>`;
+        } else {
+            // Asosiy ro'yxat ko'rinishi (Magazinlar va Kargolar ketma-ketligi + O'chirish + Ichiga kirish)
+            rightSideHtml = `<div class="c">
+                <h3>${tr("supTitle")}</h3>
+                <p class="mu" style="margin-top:-6px;margin-bottom:10px">💡 Magazin yoki Kargo nomining ustiga bossangiz ichidagi barcha chislolar, tovarlar va toʻlovlar ochiladi.</p>
+                <div class="row">
+                    <label style="flex:2">${tr("newPartner")}<input id="newSpNm" placeholder="Matiz Zavod yoki Kargo nomi..."></label>
+                    <label style="flex:1">${tr("type")}
+                        <select id="newSpTp">
+                            <option value="sup">🏭 Magazin / Zavod</option>
+                            <option value="cargo">🚚 Kargo</option>
+                        </select>
+                    </label>
+                    <button class="b" onclick="addPartner()">${tr("addBtn")}</button>
+                </div>
+
+                <h4 style="margin:12px 0 6px">🏭 Magazinlar / Zavodlar roʻyxati</h4>
+                <div class="tw"><table>
+                    <tr><th>#</th><th>Magazin nomi (Bosing)</th><th>${tr("remDebt")}</th><th>Tezkor Toʻlov (${S.cur})</th><th></th></tr>
+                    ${sups.map((sp, idx) => `<tr>
+                        <td>${idx + 1}</td>
+                        <td><span class="partner-link" onclick="activePartnerId='${sp.id}';openBatchId=null;render()">🏭 ${esc(sp.name)} ➔</span></td>
+                        <td><b style="color:${sp.debtUZS>0?'var(--bad)':'var(--ok)'}">${f(sp.debtUZS||0)} ${S.cur}</b></td>
+                        <td>
+                            <div class="row" style="margin:0">
+                                <input id="spd_${sp.id}" type="number" placeholder="${tr("amt")}" style="width:90px">
+                                <button class="b b-sm" onclick="payPartnerDebtById('${sp.id}')">${tr("payBtn")}</button>
+                            </div>
+                        </td>
+                        <td class="r"><button class="x" title="Oʻchirish" onclick="delPartner('${sp.id}')">🗑️</button></td>
+                    </tr>`).join("")}
+                </table></div>
+
+                <h4 style="margin:14px 0 6px">🚚 Kargolar roʻyxati</h4>
+                <div class="tw"><table>
+                    <tr><th>#</th><th>Kargo nomi (Bosing)</th><th>${tr("remDebt")}</th><th>Tezkor Toʻlov (${S.cur})</th><th></th></tr>
+                    ${cargos.map((cg, idx) => `<tr>
+                        <td>${idx + 1}</td>
+                        <td><span class="partner-link" onclick="activePartnerId='${cg.id}';openBatchId=null;render()">🚚 ${esc(cg.name)} ➔</span></td>
+                        <td><b style="color:${cg.debtUZS>0?'var(--bad)':'var(--ok)'}">${f(cg.debtUZS||0)} ${S.cur}</b></td>
+                        <td>
+                            <div class="row" style="margin:0">
+                                <input id="spd_${cg.id}" type="number" placeholder="${tr("amt")}" style="width:90px">
+                                <button class="b b-sm" onclick="payPartnerDebtById('${cg.id}')">${tr("payBtn")}</button>
+                            </div>
+                        </td>
+                        <td class="r"><button class="x" title="Oʻchirish" onclick="delPartner('${cg.id}')">🗑️</button></td>
+                    </tr>`).join("")}
+                </table></div>
+            </div>`;
+        }
+
         return `<div class="g2">
+            <!-- CHAP TOMON: 1-QATORDA FAQAT MAGAZIN NOMI (SKLAD OLIB TASHLANDI) -->
             <div class="c">
                 <h3>${tr("impNew")}</h3>
                 
+                <!-- 1-QATOR: FAQAT MAGAZIN NOMI -->
                 <div class="row">
-                    <label>${tr("supName")}
+                    <label style="width:100%">${tr("supName")}
                         <select id="supSel" onchange="$('supNew').style.display=this.value==='new'?'block':'none'">
                             ${sups.map(s=>`<option value="${s.id}">🏭 ${esc(s.name)}</option>`).join("")}
                             <option value="new">➕ ${tr("newPartner")}</option>
                         </select>
-                        <input id="supNew" placeholder="Matiz Zavod..." style="display:none;margin-top:6px">
+                        <input id="supNew" placeholder="Yangi magazin / zavod nomi..." style="display:none;margin-top:6px">
                     </label>
-                    <label>${tr("warehouse")}<select id="initWh">${whs.map(w=>`<option value="${w.id}">${esc(locTitle(w))}</option>`).join("")}</select></label>
                 </div>
 
+                <!-- 2-QATOR: TOVAR NOMI VA KOD -->
                 <div class="row">
                     <label style="flex:2">${tr("prodName")}<input id="nm" placeholder="Nike Air Zoom..."></label>
                     <label style="flex:1">${tr("barcode")}<input id="bc" placeholder="8901..."></label>
                 </div>
 
+                <!-- 3-QATOR: RASM -->
                 <label>${tr("prodImg")}
                     <input type="file" accept="image/*" onchange="uploadBuyImg(this)">
                 </label>
 
+                <!-- 4-QATOR: KAROBKA VA DONA -->
                 <div class="row">
                     ${num("bxn",tr("boxCnt"),"","10","")}
                     ${num("pc",tr("perBox"),"","12","")}
@@ -571,23 +762,24 @@ const V = {
                     </div>
                 </div>
 
-                <button class="b b-tp" style="width:100%;margin-top:8px" onclick="addItemToBuyCart()">➕ Ro‘yxatga qo‘shish</button>
+                <button class="b b-tp" style="width:100%;margin-top:8px" onclick="V.addItemToBuyCart()">➕ Roʻyxatga qoʻshish (Ketma-ketlik)</button>
 
-                <!-- QO'SHILGAN TOVARLAR SAVATCHASI VA O'CHIRISH TUGMASI -->
-                <div style="margin:14px 0;max-height:220px;overflow-y:auto">
+                <!-- KIRITILAYOTGAN TOVARLAR KETMA-KETLIGI RO'YXATI -->
+                <div style="margin:14px 0;max-height:240px;overflow-y:auto">
                     ${buyCart.length ? `<table>
-                        <tr><th>Tovar</th><th>Karobka / Dona</th><th class="r">Summa</th><th></th></tr>
+                        <tr><th>№</th><th>Tovar</th><th>Karobka / Dona</th><th class="r">Summa</th><th></th></tr>
                         ${buyCart.map((it, idx) => `<tr>
+                            <td><b>${idx + 1}</b></td>
                             <td><b>${esc(it.name)}</b><br><span class="mu">${it.boxes} karobka (${it.per} tadan)</span></td>
                             <td>${it.boxes * it.per} dona</td>
                             <td class="r"><b>${it.totCur}</b></td>
-                            <td class="r"><button class="x" onclick="buyCart.splice(${idx},1);render()">🗑️ O'chirish</button></td>
+                            <td class="r"><button class="x" onclick="buyCart.splice(${idx},1);render()">🗑️</button></td>
                         </tr>`).join("")}
-                    </table>` : `<p class="mu" style="text-align:center;margin:10px 0">Hali tovarlar qo‘shilmadi. Yuqoridan ketma-ket qo‘shib chiqing!</p>`}
+                    </table>` : `<p class="mu" style="text-align:center;margin:10px 0">Tovarlar ketma-ketligi boʻsh. Yuqoridan tovarlarni bitta-bitta qoʻshing!</p>`}
                 </div>
 
                 <div class="c" style="background:#0b1120;margin:10px 0;padding:12px">
-                    <div class="mu">Jami tovarlar summasi:</div>
+                    <div class="mu">Jami roʻyxatdagi tovarlar summasi:</div>
                     <div class="big" style="color:var(--tp)">${cartTot}</div>
                 </div>
 
@@ -600,58 +792,24 @@ const V = {
                     ${num("om",tr("optMin"),"","5")}
                 </div>
 
-                <button class="b b-ok" style="width:100%;margin-top:8px" onclick="saveWholeBuyBatch()">✅ Sotib olindi (Zavodga yozish)</button>
+                <button class="b b-ok" style="width:100%;margin-top:8px;padding:13px" onclick="V.saveWholeBuyBatch()">✅ Sotib oldim (Magazinga yozish — Yoʻlda)</button>
             </div>
 
-            <!-- ZAVOD VA KARGOLAR QARZDORLIK DAFTARI -->
+            <!-- O'NG TOMON: MAGAZINLAR VA KARGOLAR RO'YXATI YOKI TANLANGAN MAGAZIN/KARGO ICHI -->
             <div>
-                <div class="c">
-                    <h3>${tr("supTitle")}</h3>
-                    <div class="row">
-                        <label style="flex:2">${tr("newPartner")}<input id="newSpNm" placeholder="Matiz Zavod..."></label>
-                        <label style="flex:1">${tr("type")}
-                            <select id="newSpTp">
-                                <option value="sup">🏭 Zavod</option>
-                                <option value="cargo">🚚 Kargo</option>
-                            </select>
-                        </label>
-                        <button class="b" onclick="addPartner()">${tr("addBtn")}</button>
-                    </div>
-                    <div class="tw"><table>
-                        <tr><th>Nomi</th><th>${tr("remDebt")}</th><th>${tr("payBtn")} (${S.cur})</th></tr>
-                        ${(S.sups||[]).map((sp, idx) => `<tr>
-                            <td><b>${sp.type==='cargo'?'🚚':'🏭'} ${esc(sp.name)}</b></td>
-                            <td><b style="color:${sp.debtUZS>0?'var(--bad)':'var(--ok)'}">${f(sp.debtUZS||0)} ${S.cur}</b></td>
-                            <td>
-                                <div class="row" style="margin:0">
-                                    <input id="spd_${idx}" type="number" placeholder="${tr("amt")}" style="width:95px">
-                                    <button class="b b-sm" onclick="payPartnerDebt(${idx})">${tr("payBtn")}</button>
-                                </div>
-                            </td>
-                        </tr>`).join("")}
-                    </table></div>
-                </div>
-
-                ${S.lots.map(l => `<div class="c">
-                    <h3>
-                        <span>${l.img ? `<img src="${esc(l.img)}" style="width:32px;height:32px;border-radius:6px;vertical-align:middle;object-fit:cover;margin-right:6px">` : `📦 `}${esc(l.name)} ${l.bc?`<span class="badge">#${esc(l.bc)}</span>`:""}</span>
-                        <button class="x" onclick="delLot('${l.id}')">🗑️</button>
-                    </h3>
-                    <div class="mu">🏭 ${esc(l.supName||"-")} | 🚚 ${esc(l.cargoName||"-")} | ⚖️ ${l.kg||0} kg</div>
-                    <div class="mu">${l.boxes} ${tr("box")} × ${l.per} ${tr("pcs")} = <b>${tot(l)} ${tr("pcs")}</b> | ${tr("costBase")}: <b>${f(unit(l))} ${S.cur}</b></div>
-                </div>`).join("")}
+                ${rightSideHtml}
             </div>
         </div>`;
     },
 
-    // SAVATCHAGA QO'SHISH FUNksiyasi
+    // SAVATCHAGA KETMA-KETLIKDA QO'SHISH
     addItemToBuyCart() {
         const nm = $("nm")?.value.trim();
         const bx = val("bxn"), pc = val("pc"), pr = val("bUnitP");
         if (!nm || bx <= 0 || pc <= 0 || pr <= 0) { alert("Tovar nomi, karobka va narxini to'liq kiriting!"); return; }
 
         const totPcs = bx * pc;
-        const totCur = totPcs * pr;
+        const totCur = Math.round(totPcs * pr * 100) / 100;
 
         buyCart.push({
             name: nm, bc: $("bc")?.value.trim() || "", img: tmpBuyImg || "",
@@ -661,15 +819,13 @@ const V = {
         tmpBuyImg = "";
         if ($("nm")) $("nm").value = "";
         if ($("bc")) $("bc").value = "";
-        if ($("bxn")) $("bxn").value = "";
-        if ($("pc")) $("pc").value = "";
         if ($("bUnitP")) $("bUnitP").value = "";
         render();
     },
 
-    // BARCHA TOVARLARNI ZAVOD QARZIGA VA SAQLASHGA YOZISH
+    // "SOTIB OLDIM" TUGMASI BOSILGANDA: MAGAZIN QARZIGA VA CHISLO RO'YXATIGA "YO'LDA" QILIB YOZISH
     saveWholeBuyBatch() {
-        if (!buyCart.length) { alert("Savatchada tovarlar yo'q!"); return; }
+        if (!buyCart.length) { alert("Avval tovarlarni roʻyxatga qoʻshing!"); return; }
 
         const cur = $("bCur").value;
         const rt = S.rate[cur] || 1;
@@ -677,45 +833,74 @@ const V = {
         let supObj = null;
         if ($("supSel").value === "new") {
             const sName = $("supNew").value.trim() || "Zavod";
-            supObj = { id: uid(), name: sName, type: "sup", debtUZS: 0 };
+            supObj = { id: uid(), name: sName, type: "sup", debtUZS: 0, payments: [] };
             S.sups.push(supObj);
         } else supObj = S.sups.find(x => x.id == $("supSel").value);
 
-        let totalSupUZS = 0;
-        buyCart.forEach(it => { totalSupUZS += it.totCur * rt; });
+        let totalSupCur = 0;
+        buyCart.forEach(it => { totalSupCur += it.totCur; });
+        const totalSupUZS = totalSupCur * rt;
 
         if (supObj && totalSupUZS > 0) supObj.debtUZS = (+supObj.debtUZS || 0) + totalSupUZS;
 
-        const initWh = $("initWh")?.value || "wh1";
         const mRet = val("mRet") || 25;
         const mOpt = val("mOpt") || 15;
         const mBox = val("mBox") || 10;
         const om = val("om") || 5;
 
+        const batchId = uid();
+        const lotIds = [];
+
         buyCart.forEach(it => {
-            const unitCostUZS = (it.totCur * rt) / (it.boxes * it.per);
+            const lid = uid();
+            lotIds.push(lid);
+            const buyUZS = it.totCur * rt;
+            const unitCostUZS = buyUZS / (it.boxes * it.per);
             const pRet = Math.round(unitCostUZS * (1 + mRet / 100));
             const pOpt = Math.round(unitCostUZS * (1 + mOpt / 100));
             const pBox = Math.round(unitCostUZS * it.per * (1 + mBox / 100));
 
             S.lots.push({
-                id: uid(), name: it.name, bc: it.bc, img: it.img,
+                id: lid, batchId, status: "transit", // Hali yo'lda, kargo belgilanganda skladga tushadi
+                name: it.name, bc: it.bc, img: it.img,
+                supId: supObj ? supObj.id : "",
                 supName: supObj ? supObj.name : "", cargoName: "",
-                kg: 0, initWh,
-                boxes: it.boxes, per: it.per, buy: it.totCur * rt,
+                kg: 0, initWh: "wh1",
+                boxes: it.boxes, per: it.per, buy: buyUZS,
+                mRet, mOpt, mBox,
                 exp: [],
                 pRet, pOpt, optMin: om, pBox, promo: 0
             });
         });
 
+        S.batches.push({
+            id: batchId,
+            supId: supObj ? supObj.id : "",
+            supName: supObj ? supObj.name : "",
+            t: Date.now(),
+            cur, rt,
+            totCur: Math.round(totalSupCur * 100) / 100,
+            totUZS: totalSupUZS,
+            status: "transit",
+            cargoId: "", cargoName: "", totalKg: 0, cargoCostUZS: 0,
+            lotIds,
+            items: buyCart.map(x => Object.assign({}, x))
+        });
+
         buyCart = [];
-        OK = "✅ Tovar muvaffaqiyatli sotib olindi va zavod qarziga yozildi!";
+        if (supObj) {
+            activePartnerId = supObj.id;
+            openBatchId = batchId;
+        }
+        OK = "✅ Tovarlar «Sotib olindi» (Yoʻlda)! Magazin ichidan kargoni belgilab skladga qabul qilishingiz mumkin.";
         save(); render();
     },
+
     // O'TKAZMA (SKLAD ⇄ SKLAD / DO'KON)
     trf() {
+        const readyLots = S.lots.filter(l => l.status !== "transit");
         return `<div class="c"><h3>${tr("mvTitle")}</h3>
-        ${S.lots.length ? `
+        ${readyLots.length ? `
             <div class="row">
                 <label>${tr("fromLoc")}
                     <select id="mvFrom">
@@ -730,7 +915,7 @@ const V = {
             </div>
             <label>${tr("selProd")}
                 <select id="tl">
-                    ${S.lots.map(l=>`<option value="${l.id}">${esc(l.name)} (${tr("inWhCol")}: ${bx(l,inWh(l))} | ${tr("inMkCol")}: ${bx(l,inMk(l))})</option>`).join("")}
+                    ${readyLots.map(l=>`<option value="${l.id}">${esc(l.name)} (${tr("inWhCol")}: ${bx(l,inWh(l))} | ${tr("inMkCol")}: ${bx(l,inMk(l))})</option>`).join("")}
                 </select>
             </label>
             <div class="row">${num("tb",tr("box"))}${num("tp",tr("pcs"))}</div>
@@ -748,36 +933,85 @@ const V = {
         }).join("")}</table></div></div>` : "");
     },
 
-    // SKLAD, REYTING (⭐) VA AKSIYA
+    // SKLAD, REYTING (⭐), AKSIYA VA SKLADDA MAVJUD TAYYOR TOVARNI QO'SHISH
     wh() {
-        return `<div class="c"><h3>${tr("whTitle")}</h3>` + 
-        (S.lots.length ? `<div class="tw"><table>
+        const whs = S.locs.filter(x => x.type === "wh");
+        const readyLots = S.lots.filter(l => l.status !== "transit");
+
+        return `<div class="c">
+            <h3>
+                <span>📦 Skladda mavjud (tayyor) tovarni qoʻshish</span>
+                <button class="b b-sm ${showDirectWhAdd?'b-bad':'b-ok'}" onclick="showDirectWhAdd=!showDirectWhAdd;render()">
+                    ${showDirectWhAdd ? '✕ Yopish' : '➕ Mavjud tovarni kiritish'}
+                </button>
+            </h3>
+            ${showDirectWhAdd ? `
+                <div class="calc-box" style="margin-top:10px">
+                    <div class="row">
+                        <label style="flex:2">${tr("prodName")}<input id="dwNm" placeholder="Masalan: Adidas Futbolka..."></label>
+                        <label style="flex:1">${tr("barcode")}<input id="dwBc" placeholder="Kod / Shtrix"></label>
+                        <label style="flex:1">${tr("warehouse")}
+                            <select id="dwWh">${whs.map(w=>`<option value="${w.id}">${esc(locTitle(w))}</option>`).join("")}</select>
+                        </label>
+                    </div>
+                    <div class="row">
+                        <label>${tr("prodImg")}<input type="file" accept="image/*" onchange="uploadWhImg(this)"></label>
+                        ${num("dwBx", tr("boxCnt"), "", "10", "calcDirectWhPrices()")}
+                        ${num("dwPc", tr("perBox"), "", "10", "calcDirectWhPrices()")}
+                    </div>
+                    <div class="row">
+                        ${num("dwCost", `1 dona kelgan narxi — Tannarx (${S.cur})`, "0", "", "calcDirectWhPrices()")}
+                        ${num("dwMRet", tr("mrgRet"), "", "25", "calcDirectWhPrices()")}
+                        ${num("dwMOpt", tr("mrgOpt"), "", "15", "calcDirectWhPrices()")}
+                        ${num("dwMBox", tr("mrgBox"), "", "10", "calcDirectWhPrices()")}
+                    </div>
+                    <div class="row">
+                        ${num("dwPRet", `Dona sotish narxi (${S.cur})`, "0", "")}
+                        ${num("dwPOpt", `Optim sotish narxi (${S.cur})`, "0", "")}
+                        ${num("dwPBox", `1 Karobka sotish narxi (${S.cur})`, "0", "")}
+                        ${num("dwOptMin", tr("optMin"), "", "5")}
+                    </div>
+                    <button class="b b-ok" style="width:100%;margin-top:8px" onclick="addDirectWhProduct()">💾 Tayyor tovarni Skladga saqlash</button>
+                </div>
+            ` : `<p class="mu" style="margin:0">Ilgaridan skladingizda bor boʻlgan tayyor tovarlarni rasm, soni, kelgan narxi va sotish narxlari bilan toʻgʻridan-toʻgʻri shu yerdan qoʻshishingiz mumkin.</p>`}
+        </div>
+
+        <div class="c"><h3>${tr("whTitle")}</h3>` + 
+        (readyLots.length ? `<div class="tw"><table>
             <tr>
                 <th>${tr("prodName")}</th>
+                <th>${tr("costBase")}</th>
+                <th>Sotish (Dona / Optim)</th>
                 <th>${tr("inWhCol")}</th>
                 <th>${tr("inMkCol")}</th>
                 <th>${tr("soldCol")}</th>
                 <th>${tr("ratingCol")}</th>
                 <th class="r">${tr("promoCol")}</th>
             </tr>
-            ${S.lots.map(l => {
+            ${readyLots.map(l => {
                 const stars = getStars(l);
                 const starHtml = stars > 0 ? "⭐".repeat(stars) : `<span class="badge badge-bad">☆ 0 (Sust)</span>`;
                 return `<tr>
-                    <td><b>${esc(l.name)}</b> ${l.promo?`<span class="badge badge-tp">${tr("promoActive")} -${l.promo}%</span>`:""}</td>
+                    <td>
+                        ${l.img ? `<img src="${esc(l.img)}" style="width:28px;height:28px;border-radius:6px;vertical-align:middle;object-fit:cover;margin-right:6px">` : ""}
+                        <b>${esc(l.name)}</b> ${l.promo?`<span class="badge badge-tp">${tr("promoActive")} -${l.promo}%</span>`:""}
+                    </td>
+                    <td><b>${f(unit(l))}</b> <small>${S.cur}</small></td>
+                    <td><b>${f(l.pRet)}</b> / <span class="mu">${f(l.pOpt)} ${S.cur}</span></td>
                     <td>${bx(l,inWh(l, activeLoc==="all"?null:activeLoc))}</td>
                     <td>${bx(l,inMk(l, activeLoc==="all"?null:activeLoc))}</td>
                     <td><b>${sold(l, null)} ${tr("pcs")}</b></td>
                     <td>${starHtml}</td>
                     <td class="r">
                         <button class="b b-sm ${stars===0?'b-tp':'b-out'}" onclick="setPromoLot('${l.id}')">${tr("makePromo")}</button>
+                        ${role==="boss"?`<button class="x" onclick="delLot('${l.id}')">🗑️</button>`:""}
                     </td>
                 </tr>`;
             }).join("")}
         </table></div>` : `<p class="mu">${tr("noProd")}</p>`) + `</div>`;
     },
 
-    // SOTUV TERMINALI (Ko'p tovarli chek / korzinka + Mijoz tanlash strelkasi)
+    // SOTUV TERMINALI
     mk() {
         const curShop = (role === "sel" && USER?.loc && USER.loc !== "all") ? USER.loc : (activeLoc !== "all" ? activeLoc : null);
         const av = S.lots.filter(l => inMk(l, curShop) > 0);
@@ -837,7 +1071,6 @@ const V = {
 
                 <button class="b b-out" style="width:100%;margin-top:6px" onclick="posAddToCart()">${tr("addCartBtn")}</button>
 
-                <!-- KORZINKAGA YIG'ILGAN TOVARLAR JADVALI -->
                 <div style="margin:12px 0;max-height:160px;overflow-y:auto">
                     ${posCart.length ? `<table>
                         <tr><th>Tovar</th><th>Soni</th><th class="r">Jami</th><th></th></tr>
@@ -1049,7 +1282,7 @@ const V = {
         </div>`;
     },
 
-    // NASIYA VA VOZVRAT (Mijoz tanlab vozvrat qilish, kassa yoki nasiyadan chegirish)
+    // NASIYA VA VOZVRAT
     debt() {
         return `<div class="g2">
             <div class="c">
@@ -1219,7 +1452,7 @@ const V = {
 };
 
 /* =========================================================
-   4. RENDER VA AUTH
+   4. RENDER VA AUTH ("MEN PAROLNI UNUTDIM" BILAN)
    ========================================================= */
 const langSelectHtml = () => `<select onchange="setLang(this.value)">
     <option value="uz" ${S.lang==="uz"?"selected":""}>🇺🇿 Oʻzbek</option>
@@ -1276,7 +1509,6 @@ function render() {
     `;
     ERR = ""; OK = "";
     if (tab === "mk") { upd(); }
-    if (tab === "buy") calcBuyForm();
 }
 
 function renderLogin() {
@@ -1299,6 +1531,7 @@ function renderLogin() {
             </div>
 
             ${ERR ? `<div class="err">${ERR}</div>` : ""}
+            ${OK ? `<div class="ok-msg">${OK}</div>` : ""}
 
             ${authMode === "login" ? `
                 <div class="c">
@@ -1307,7 +1540,19 @@ function renderLogin() {
                     <label>${tr("pinCode")}<input id="pw" type="password" inputmode="numeric" placeholder="1234"></label>
                     <button class="b" style="width:100%" onclick="login()">${tr("login")}</button>
                     ${lastBioUser ? `<button class="b b-out" style="width:100%;margin-top:8px" onclick="bioLogin('${lastBioUser.id}')">${tr("bioBtn")} (${esc(lastBioUser.name)})</button>` : ""}
+                    <button class="b b-out" style="width:100%;margin-top:8px;border-style:dashed;color:var(--tp)" onclick="authMode='forgot';renderLogin()">❓ Men parolni unutdim (PIN tiklash)</button>
                     <p class="mu" style="margin-top:10px">Demo: <b>boss</b>, <b>menejer</b>, <b>sotuvchi</b>, <b>xaridor</b> | PIN: <b>1234</b></p>
+                </div>
+            ` : authMode === "forgot" ? `
+                <div class="c">
+                    <h3>🔑 Parolni (PIN-kodni) tiklash</h3>
+                    <p class="mu">Roʻyxatdan oʻtgan Login (telefon) yoki Ismingizni kiriting va yangi PIN-kod oʻrnating:</p>
+                    <label>${tr("phone")} yoki ${tr("fullName")}<input id="fgLg" placeholder="boss yoki Ibrohim..."></label>
+                    <label>Yangi ${tr("pinCode")}<input id="fgNewPw" type="password" inputmode="numeric" placeholder="Yangi 4 raqamli PIN (masalan: 1234)"></label>
+                    <div class="row" style="margin-top:10px">
+                        <button class="b b-ok" style="flex:2" onclick="resetForgotPw()">💾 Yangi parolni saqlash va Kirish</button>
+                        <button class="b b-out" style="flex:1" onclick="authMode='login';renderLogin()">⬅️ Orqaga</button>
+                    </div>
                 </div>
             ` : authMode === "cust" ? `
                 <div class="c">
@@ -1336,7 +1581,7 @@ function renderLogin() {
             `}
         </div>
     `;
-    ERR = "";
+    ERR = ""; OK = "";
 }
 
 /* =========================================================
@@ -1345,7 +1590,18 @@ function renderLogin() {
 function login() {
     const l = $("lg").value.trim(), p = $("pw").value.trim();
     const u = S.users.find(x => x.login == l && x.pw == p);
-    if (!u) { ERR = "Login / PIN xato!"; renderLogin(); return; }
+    if (!u) { ERR = "Login / PIN xato! Agar unutgan boʻlsangiz «Men parolni unutdim» tugmasini bosing."; renderLogin(); return; }
+    finishAuth(u);
+}
+function resetForgotPw() {
+    const q = ($("fgLg")?.value || "").trim().toLowerCase();
+    const np = ($("fgNewPw")?.value || "").trim();
+    if (!q || !np) { ERR = "Login va yangi PIN-kodni kiriting!"; renderLogin(); return; }
+    const u = S.users.find(x => (x.login||"").toLowerCase() === q || (x.name||"").toLowerCase() === q);
+    if (!u) { ERR = "Bunday login yoki ismli foydalanuvchi topilmadi!"; renderLogin(); return; }
+    u.pw = np;
+    OK = `✅ Parol yangilandi! Login: ${u.login}`;
+    save();
     finishAuth(u);
 }
 function bioLogin(uidStr) {
@@ -1401,117 +1657,138 @@ const go = t => { tab = t; render(); };
 const val = id => +($(id)?.value) || 0;
 const fail = m => { ERR = m; render(); };
 
-// XARID KALKULYATORI MANTIQI
+// RASM YUKLASH (XARID VA SKLAD UCHUN)
 function uploadBuyImg(input) {
     const file = input.files && input.files[0]; if (!file) return;
     const r = new FileReader(); r.onload = e => { tmpBuyImg = e.target.result; }; r.readAsDataURL(file);
 }
-function onUnitBuyInput() {
-    const totPcs = Math.max(1, val("bxn") * val("pc"));
-    const uPr = val("bUnitP");
-    if ($("bTotCur")) $("bTotCur").value = Math.round(totPcs * uPr * 100) / 100;
-    calcBuyForm();
+function uploadWhImg(input) {
+    const file = input.files && input.files[0]; if (!file) return;
+    const r = new FileReader(); r.onload = e => { tmpWhImg = e.target.result; }; r.readAsDataURL(file);
 }
-function onTotalBuyInput() {
-    const totPcs = Math.max(1, val("bxn") * val("pc"));
-    const totCur = val("bTotCur");
-    if ($("bUnitP")) $("bUnitP").value = Math.round((totCur / totPcs) * 100) / 100;
-    calcBuyForm();
-}
-function onKgInput() {
-    const kg = val("bKg"), prKg = val("bKgPr");
-    if (kg > 0 && prKg > 0 && $("bCgTot")) {
-        $("bCgTot").value = Math.round(kg * prKg * 100) / 100;
+
+// YO'LDAGI PARTIYAGA KARGO BIRIKTIRISH VA SKLADGA KIRITISH
+function receiveBatchCargo(batchId) {
+    const b = (S.batches || []).find(x => x.id == batchId);
+    if (!b) return;
+    const cgId = $("arrCg_" + batchId)?.value;
+    const whId = $("arrWh_" + batchId)?.value || "wh1";
+    const totalKg = val("arrKg_" + batchId);
+    const cargoCostCur = val("arrCost_" + batchId);
+    const cargoCostUZS = cargoCostCur * curRate();
+
+    const cgObj = (S.sups || []).find(x => x.id == cgId);
+    if (cgObj && cargoCostUZS > 0) {
+        cgObj.debtUZS = (+cgObj.debtUZS || 0) + cargoCostUZS;
     }
-    calcBuyForm();
+
+    b.status = "arrived";
+    b.cargoId = cgObj ? cgObj.id : "";
+    b.cargoName = cgObj ? cgObj.name : "Kargo";
+    b.totalKg = totalKg;
+    b.cargoCostUZS = cargoCostUZS;
+
+    // Kargo xarajatini partiya ichidagi tovarlarga proporsional taqsimlab, Skladga kiritamiz
+    const batchLots = S.lots.filter(l => l.batchId === batchId);
+    const totalBatchPcs = batchLots.reduce((acc, l) => acc + (l.boxes * l.per), 0) || 1;
+
+    batchLots.forEach(l => {
+        l.status = "ready";
+        l.initWh = whId;
+        l.cargoName = b.cargoName;
+        const pcs = l.boxes * l.per;
+        const shareRatio = pcs / totalBatchPcs;
+        l.kg = Math.round(totalKg * shareRatio * 10) / 10;
+        const lotCargoUZS = Math.round(cargoCostUZS * shareRatio);
+        if (lotCargoUZS > 0) {
+            l.exp = [{ label: `${b.cargoName} (${l.kg} kg)`, amt: lotCargoUZS }];
+        }
+        // Yangi tannarx asosida sotish narxlarini yangilaymiz
+        const uCost = unit(l);
+        const mR = l.mRet || 25, mO = l.mOpt || 15, mB = l.mBox || 10;
+        l.pRet = Math.round(uCost * (1 + mR / 100));
+        l.pOpt = Math.round(uCost * (1 + mO / 100));
+        l.pBox = Math.round(uCost * l.per * (1 + mB / 100));
+    });
+
+    OK = `✅ Partiya «${b.cargoName}» orqali Skladga qabul qilindi!`;
+    save(); render();
 }
-function calcBuyForm() {
-    if (!$("bxn")) return;
-    const totPcs = Math.max(1, val("bxn") * val("pc"));
-    const c = $("bCur")?.value || "USD";
-    const rt = S.rate[c] || 1;
-    const totSupCur = val("bTotCur");
-    const totCgCur = val("bCgTot");
-    const otherCur = val("bOther");
 
-    const grandTotalCur = totSupCur + totCgCur + otherCur;
-    const grandTotalUZS = grandTotalCur * rt;
-    const unitCostUZS = grandTotalUZS / totPcs;
+// SKLAD BO'LIMIDA TAYYOR TOVARNI QO'SHISH FUNKSIYALARI
+function calcDirectWhPrices() {
+    const costCur = val("dwCost");
+    if (costCur <= 0) return;
+    const perBx = Math.max(1, val("dwPc") || 1);
+    const mR = val("dwMRet"), mO = val("dwMOpt"), mB = val("dwMBox");
+    if ($("dwPRet")) $("dwPRet").value = Math.round(costCur * (1 + mR / 100) * 100) / 100;
+    if ($("dwPOpt")) $("dwPOpt").value = Math.round(costCur * (1 + mO / 100) * 100) / 100;
+    if ($("dwPBox")) $("dwPBox").value = Math.round(costCur * perBx * (1 + mB / 100) * 100) / 100;
+}
 
-    if ($("lblUnitCost")) {
-        $("lblUnitCost").innerHTML = `${f(unitCostUZS)} <small>${S.cur}</small>`;
+function addDirectWhProduct() {
+    const nm = $("dwNm")?.value.trim();
+    const bxCnt = val("dwBx"), perBx = val("dwPc");
+    const costCur = val("dwCost");
+    if (!nm || bxCnt <= 0 || perBx <= 0 || costCur <= 0) {
+        return fail("Tovar nomi, karobka/dona soni va kelgan narxini kiriting!");
     }
-    applyMargins(unitCostUZS);
-}
-function applyMargins(passedUnitUZS) {
-    if (!$("bxn")) return;
-    const totPcs = Math.max(1, val("bxn") * val("pc"));
-    const c = $("bCur")?.value || "USD";
-    const rt = S.rate[c] || 1;
-    const grandTotalUZS = (val("bTotCur") + val("bCgTot") + val("bOther")) * rt;
-    const uCost = passedUnitUZS !== undefined ? passedUnitUZS : (grandTotalUZS / totPcs);
-    if (uCost <= 0) return;
-
-    const mR = val("mRet"), mO = val("mOpt"), mB = val("mBox");
-    const perBx = Math.max(1, val("pc"));
-    if ($("p1")) $("p1").value = Math.round(uCost * (1 + mR / 100));
-    if ($("p2")) $("p2").value = Math.round(uCost * (1 + mO / 100));
-    if ($("p3")) $("p3").value = Math.round(uCost * perBx * (1 + mB / 100));
-}
-
-function addLot() {
-    const nm = $("nm").value.trim(), b = val("bxn"), p = val("pc");
-    if (!nm || b <= 0 || p <= 0) return fail(tr("prodName") + "!");
-    const c = $("bCur")?.value || "USD";
-    const rt = S.rate[c] || 1;
-
-    let supObj = null;
-    if ($("supSel").value === "new") {
-        const sName = $("supNew").value.trim() || "Zavod";
-        supObj = { id: uid(), name: sName, type: "sup", debtUZS: 0 };
-        S.sups.push(supObj);
-    } else supObj = S.sups.find(x => x.id == $("supSel").value);
-
-    let cgObj = null;
-    if ($("cgSel").value === "new") {
-        const cName = $("cgNew").value.trim() || "Kargo";
-        cgObj = { id: uid(), name: cName, type: "cargo", debtUZS: 0 };
-        S.sups.push(cgObj);
-    } else cgObj = S.sups.find(x => x.id == $("cgSel").value);
-
-    const supTotalUZS = val("bTotCur") * rt;
-    if (supObj && supTotalUZS > 0) supObj.debtUZS = (+supObj.debtUZS || 0) + supTotalUZS;
-
-    const cgTotalUZS = val("bCgTot") * rt;
-    if (cgObj && cgTotalUZS > 0) cgObj.debtUZS = (+cgObj.debtUZS || 0) + cgTotalUZS;
-
-    const otherUZS = val("bOther") * rt;
-    const expArr = [];
-    if (cgTotalUZS > 0) expArr.push({ label: (cgObj?cgObj.name:"Kargo") + ` (${val("bKg")} kg)`, amt: cgTotalUZS });
-    if (otherUZS > 0) expArr.push({ label: tr("extraExp"), amt: otherUZS });
+    const rt = curRate();
+    const totPcs = bxCnt * perBx;
+    const totalBuyUZS = costCur * rt * totPcs;
+    const pRetUZS = (val("dwPRet") || costCur * 1.25) * rt;
+    const pOptUZS = (val("dwPOpt") || costCur * 1.15) * rt;
+    const pBoxUZS = (val("dwPBox") || costCur * perBx * 1.1) * rt;
 
     S.lots.push({
-        id: uid(), name: nm, bc: $("bc").value.trim(), img: tmpBuyImg,
-        supName: supObj ? supObj.name : "", cargoName: cgObj ? cgObj.name : "",
-        kg: val("bKg"), initWh: $("initWh")?.value || "wh1",
-        boxes: b, per: p, buy: supTotalUZS, exp: expArr,
-        pRet: val("p1"), pOpt: val("p2"), optMin: val("om") || 5, pBox: val("p3"), promo: 0
+        id: uid(), status: "ready",
+        name: nm, bc: $("dwBc")?.value.trim() || "", img: tmpWhImg || "",
+        supName: "Mavjud zaxira", cargoName: "-",
+        kg: 0, initWh: $("dwWh")?.value || "wh1",
+        boxes: bxCnt, per: perBx, buy: totalBuyUZS, exp: [],
+        pRet: Math.round(pRetUZS), pOpt: Math.round(pOptUZS), optMin: val("dwOptMin") || 5, pBox: Math.round(pBoxUZS), promo: 0
     });
-    tmpBuyImg = ""; OK = "✅ " + nm; save(); render();
+    tmpWhImg = "";
+    showDirectWhAdd = false;
+    OK = `✅ «${nm}» Skladga muvaffaqiyatli qoʻshildi!`;
+    save(); render();
 }
 
+// MAGAZIN VA KARGOLAR BILAN ISHLASH (QO'SHISH, TO'LASH, O'CHIRISH)
 function addPartner() {
     const nm = $("newSpNm").value.trim(), tp = $("newSpTp").value;
     if (!nm) return fail(tr("newPartner"));
-    S.sups.push({ id: uid(), name: nm, type: tp, debtUZS: 0 });
+    S.sups.push({ id: uid(), name: nm, type: tp, debtUZS: 0, payments: [] });
     OK = "✅ " + nm; save(); render();
 }
-function payPartnerDebt(idx) {
-    const sp = S.sups[idx], amt = val("spd_" + idx);
+function payPartnerDebtById(id) {
+    const sp = (S.sups || []).find(x => x.id == id);
+    const amt = val("spd_" + id);
     if (!sp || amt <= 0) return fail(tr("amt") + "!");
     const amtUZS = amt * curRate();
     sp.debtUZS = Math.max(0, (+sp.debtUZS || 0) - amtUZS);
+    if (!sp.payments) sp.payments = [];
+    sp.payments.push({ id: uid(), amtUZS, note: "Tezkor toʻlov", t: Date.now() });
     OK = "✅ " + sp.name; save(); render();
+}
+function payInsidePartner(id) {
+    const sp = (S.sups || []).find(x => x.id == id);
+    const amt = val("inPayAmt");
+    const note = $("inPayNote")?.value.trim() || "Toʻlov";
+    if (!sp || amt <= 0) return fail(tr("amt") + "!");
+    const amtUZS = amt * curRate();
+    sp.debtUZS = Math.max(0, (+sp.debtUZS || 0) - amtUZS);
+    if (!sp.payments) sp.payments = [];
+    sp.payments.push({ id: uid(), amtUZS, note, t: Date.now() });
+    OK = `✅ ${sp.name}: ${f(amtUZS)} ${S.cur} toʻlandi!`; save(); render();
+}
+function delPartner(id) {
+    const sp = (S.sups || []).find(x => x.id == id);
+    if (!sp) return;
+    if (!confirm(`«${sp.name}» ni roʻyxatdan oʻchirib tashlaysizmi?`)) return;
+    S.sups = S.sups.filter(x => x.id != id);
+    if (activePartnerId === id) activePartnerId = null;
+    save(); render();
 }
 function delLot(id) { if (!confirm("Delete?")) return; S.lots = S.lots.filter(x => x.id != id); save(); render(); }
 
@@ -1541,7 +1818,7 @@ function setPromoLot(lotId) {
     OK = `🔥 ${l.name}: -${numPct}%`; save(); render();
 }
 
-// POS SOTUV (Kozinka va Multi-tovar)
+// POS SOTUV
 let sMode = "auto", payType = "cash";
 function pickPos(id) { selLotId = id; if ($("sl")) $("sl").value = id; document.querySelectorAll(".pos-card").forEach(c => c.classList.remove("sel")); upd(); }
 function filterPos() {
@@ -1575,7 +1852,7 @@ function tot2() {
     if (!$("sl")) return;
     const [l, q] = qty(); if (!l) return;
     const finalTot = Math.max(0, (q * val("spr")) - val("sdisc"));
-    $("stot").innerHTML = `${q} ${tr("pcs")} = ${f(finalTot)} <small>${S.cur}</small>`;
+    if ($("stot")) $("stot").innerHTML = `${q} ${tr("pcs")} = ${f(finalTot)} <small>${S.cur}</small>`;
 }
 
 function posAddToCart() {
@@ -1696,7 +1973,6 @@ function payDebt(idx) {
     OK = "✅"; save(); render();
 }
 
-// VOZVRAT (Mijozni tanlash, kassadan pul qaytarish yoki nasiyadan ayirish)
 function makeReturn() {
     const sId = $("retSale")?.value, rq = val("retQ");
     const custId = $("retCust")?.value;
@@ -1714,7 +1990,6 @@ function makeReturn() {
         const c = S.co.find(x => x.id == custId);
         if (c) c.debt = Math.max(0, (+c.debt || 0) - returnTot);
     } else {
-        // Kassadan pul qaytarish uchun rasxod yozamiz
         S.mexp.push({ id: uid(), label: `Vozvrat #${sId.slice(-4)}`, amt: returnTot, w: wallet, t: Date.now() });
     }
 
@@ -1756,8 +2031,8 @@ function loadDemoLots() {
     if (S.lots.length === 0) {
         const id1 = uid(), id2 = uid();
         S.lots.push(
-            { id: id1, name: "Nike Air Zoom Krossovka", bc: "8901", img: "", supName: "Matiz Zavod", cargoName: "Fayzstar Cargo", kg: 120, initWh: "wh1", boxes: 10, per: 12, buy: 18000000, exp: [{label:"Fayzstar Cargo", amt:1200000}], pRet: 220000, pOpt: 190000, optMin: 5, pBox: 2160000, promo: 0 },
-            { id: id2, name: "Adidas Sport Kostyum", bc: "8902", img: "", supName: "Matiz Zavod", cargoName: "Fayzstar Cargo", kg: 95, initWh: "wh1", boxes: 8, per: 10, buy: 14000000, exp: [], pRet: 260000, pOpt: 230000, optMin: 4, pBox: 2200000, promo: 0 }
+            { id: id1, status: "ready", name: "Nike Air Zoom Krossovka", bc: "8901", img: "", supName: "Matiz Zavod", cargoName: "Fayzstar Cargo", kg: 120, initWh: "wh1", boxes: 10, per: 12, buy: 18000000, exp: [{label:"Fayzstar Cargo", amt:1200000}], pRet: 220000, pOpt: 190000, optMin: 5, pBox: 2160000, promo: 0 },
+            { id: id2, status: "ready", name: "Adidas Sport Kostyum", bc: "8902", img: "", supName: "Matiz Zavod", cargoName: "Fayzstar Cargo", kg: 95, initWh: "wh1", boxes: 8, per: 10, buy: 14000000, exp: [], pRet: 260000, pOpt: 230000, optMin: 4, pBox: 2200000, promo: 0 }
         );
         S.moves.push({ id: uid(), lot: id1, q: 36, from: "wh1", to: "mk1", t: Date.now(), by: "boss" });
         S.moves.push({ id: uid(), lot: id2, q: 20, from: "wh1", to: "mk1", t: Date.now(), by: "boss" });
@@ -1782,6 +2057,7 @@ function toggleBot(show) {
 }
 
 render();
+loadFromSupabase();
 </script>
 </body>
 </html>
