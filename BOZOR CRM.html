@@ -1,0 +1,1779 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bozor hisobi — SaaS</title>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+    :root {
+      --bg: #0f172a;
+      --sf: #1e293b;
+      --ink: #f8fafc;
+      --mu: #94a3b8;
+      --ln: #334155;
+      --ac: #3b82f6;
+      --on: #fff;
+      --tp: #f59e0b;
+      --bad: #ef4444;
+      --ok: #10b981;
+      color-scheme: dark;
+    }
+    html{scroll-padding-top:env(safe-area-inset-top,0px)}
+    body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Onest,system-ui,-apple-system,"Segoe UI",sans-serif;padding-bottom:60px}
+    .wrap{max-width:1080px;margin:0 auto;padding:14px}
+    header{display:flex;justify-content:space-between;align-items:center;gap:10px;border-left:6px solid var(--tp);padding:10px 14px;margin-bottom:14px;background:var(--sf);border-radius:12px;border:1px solid var(--ln);flex-wrap:wrap}
+    .brand-wrap{display:flex;align-items:center;gap:10px}
+    .brand-logo{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,var(--ac),#8b5cf6);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.2rem;object-fit:cover;border:1px solid rgba(255,255,255,0.15);flex-shrink:0}
+    .hdr-tools{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+    .hdr-tools select{width:auto;padding:6px 8px;margin:0;font-size:.85rem;background:#0b1120;color:var(--ink);border:1px solid var(--ln);border-radius:8px}
+    h1{margin:0;font-size:1.2rem;font-weight:800}h3{margin:0 0 10px;font-size:1.03rem;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+    nav{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;border-bottom:1px solid var(--ln);padding-bottom:10px;margin-bottom:14px}
+    @media(max-width:640px){nav{grid-template-columns:repeat(3,1fr)}}
+    .tab{text-align:center;background:rgba(255,255,255,0.03);border:1px solid var(--ln);border-radius:8px;color:var(--mu);padding:8px 6px;font:600 13px Onest,system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:0.2s}
+    .tab:hover{color:var(--ink);background:rgba(255,255,255,0.08)}
+    .tab.on{color:#fff;background:var(--ac);border-color:var(--ac);box-shadow:0 4px 12px rgba(59,130,246,0.3)}
+    .c{background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:15px;margin-bottom:14px;box-shadow:0 4px 20px rgba(0,0,0,0.15)}
+    .g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px;margin-bottom:14px}.g2 .c{margin:0}
+    .g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:12px;margin-bottom:14px}.g3 .c{margin:0}
+    .big{font-size:1.35rem;font-weight:800}.big small{font-size:.78rem;font-weight:600;color:var(--mu)}
+    .mu{color:var(--mu);font-size:.86rem}
+    label{display:block;font-size:.81rem;color:var(--mu);margin-bottom:6px;flex:1;min-width:120px}
+    input,select,textarea{width:100%;box-sizing:border-box;padding:9px 11px;margin-top:3px;border:1px solid var(--ln);border-radius:10px;background:#0b1120;color:var(--ink);font:14.5px Onest,system-ui,sans-serif;outline:none}
+    input:focus,select:focus{border-color:var(--ac);box-shadow:0 0 0 2px rgba(59,130,246,0.2)}
+    .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px}
+    .b{background:var(--ac);color:#fff;border:0;border-radius:10px;padding:10px 15px;font:600 14px Onest,system-ui,sans-serif;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:0.2s}
+    .b:hover{opacity:0.92;transform:translateY(-1px)}
+    .b:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+    .b-out{background:transparent;color:var(--ink);border:1px solid var(--ln)}
+    .b-tp{background:var(--tp);color:#000}
+    .b-ok{background:var(--ok);color:#fff}
+    .b-bad{background:var(--bad);color:#fff}
+    .b-sm{padding:6px 10px;font-size:.8rem;border-radius:8px}
+    .x{background:none;border:0;color:var(--bad);font-size:1.15rem;cursor:pointer;padding:0 4px}
+    .tw{overflow-x:auto}table{width:100%;border-collapse:collapse;margin:6px 0 10px}
+    td,th{padding:8px 6px;border-bottom:1px solid var(--ln);text-align:left;font-size:.88rem}.r{text-align:right}th{color:var(--mu);font-weight:600;font-size:.78rem;text-transform:uppercase}
+    .err{background:var(--bad);color:#fff;padding:10px 12px;border-radius:10px;margin-bottom:14px;font-weight:600}
+    .ok-msg{background:var(--ok);color:#fff;padding:10px 12px;border-radius:10px;margin-bottom:14px;font-weight:600}
+    .badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:.74rem;font-weight:600;background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3)}
+    .badge-ok{background:rgba(16,185,129,0.15);color:#34d399;border-color:rgba(16,185,129,0.3)}
+    .badge-tp{background:rgba(245,158,11,0.15);color:#fbbf24;border-color:rgba(245,158,11,0.3)}
+    .badge-bad{background:rgba(239,68,68,0.15);color:#f87171;border-color:rgba(239,68,68,0.3)}
+    .seg{display:flex;border:1px solid var(--ln);border-radius:10px;overflow:hidden;margin-bottom:10px;background:#0b1120}
+    .seg button{flex:1;padding:9px 6px;background:none;border:0;color:var(--mu);font:600 13px Onest,system-ui,sans-serif;cursor:pointer;transition:0.2s}
+    .seg button.on{background:var(--ac);color:#fff}
+    .pos-wrap{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+    @media(max-width:760px){.pos-wrap{grid-template-columns:1fr}}
+    .pg{display:grid;grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:10px;max-height:430px;overflow-y:auto;padding-right:4px}
+    .pos-card{background:#0b1120;border:1px solid var(--ln);border-radius:11px;padding:10px;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;transition:0.15s}
+    .pos-card:hover,.pos-card.sel{border-color:var(--ac);box-shadow:0 0 0 2px rgba(59,130,246,0.25)}
+    .pi{width:100%;height:74px;border-radius:8px;object-fit:cover;background:var(--sf);display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin-bottom:6px}
+    .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.72);display:none;align-items:center;justify-content:center;padding:14px;z-index:999}
+    .modal-bg.show{display:flex}
+    .modal-c{background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:18px;max-width:440px;width:100%}
+    .calc-box{background:#0b1120;border:1px dashed var(--ac);border-radius:12px;padding:12px;margin:10px 0}
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<div id="botModal" class="modal-bg">
+  <div class="modal-c">
+    <h3><span id="botModalTitle">🤖 Telegram Bot</span><button class="x" onclick="toggleBot(false)">✕</button></h3>
+    <div id="botBody"></div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   1. TO'LIQ 7 TILLI LUG'AT (UZ, KG, RU, EN, ZH, KZ, TJ)
+   ========================================================= */
+const I18N = {
+    uz: {
+        home:"Bosh sahifa", buy:"Sotib olish", trf:"Oʻtkazma", wh:"Sklad", mk:"Sotuv (POS)", ord:"Buyurtmalar", cat:"Katalog", cash:"Kassa", debt:"Mijoz & Nasiya", staff:"Sklad & Xodim", sub:"Obuna", prof:"Profil", bot:"Bot", lock:"Chiqish",
+        login:"Kirish", reg:"Yangi Doʻkon", custReg:"Xaridor Roʻyxati", bioBtn:"🫆 Barmoq izi (PIN) bilan kirish",
+        allLocs:"🌐 Barcha nuqtalar", mainWh:"Asosiy Sklad", mainMk:"1-Doʻkon (Asosiy)",
+        role_boss:"Boshliq", role_man:"Menejer", role_sel:"Sotuvchi", role_cust:"Xaridor",
+        stWh:"Skladdagi tovar (tannarx)", stMk:"Bozordagi tovar (tannarx)", stRev:"Jami savdo", stProf:"Sof Foyda", stCash:"Naqd Kassa", stCard:"Kartadagi pul", stDebt:"Mijozlardagi Nasiya", stSupDebt:"Zavod/Kargodan Qarzimiz", stExp:"Bozor xarajatlari", stHand:"Topshirilgan pul",
+        startImp:"Boshlash uchun «Sotib olish» boʻlimida birinchi partiyani kiriting.", statTitle:"📊 Savdo Statistikasi", disc:"Chegirmalar", lotsCnt:"Partiyalar", salesCnt:"Cheklar",
+        box:"karobka", pcs:"dona", prRet:"Dona narx", prOpt:"Optim narx", prBox:"Karobka narx",
+        impNew:"🛍️ Tovar Sotib Olish & Tannarx Kalkulyatori", supTitle:"🏭 Zavod / Magazin va Kargo Qarzlari", supName:"Kimdan olindi (Zavod / Magazin)", cargoName:"Kargo / Ombor", newPartner:"Yoki yangi nom...",
+        prodName:"Tovar nomi", barcode:"Shtrix-kod / Kod", prodImg:"Tovar rasmi (Fayldan tanlash)", boxCnt:"Karobka soni", perBox:"1 karobkada dona",
+        buyCur:"Valyuta", buyPriceUnit:"Xarid narxi (1 dona)", buyTotalCur:"Jami summa",
+        totKg:"Ogʻirlik (kg)", pricePerKg:"1 kg kargo narxi", cargoTotal:"Jami Kargo / Ombor",
+        otherExp:"Qoʻshimcha rasxod", calcUnitCost:"📌 1 dona aniq Tannarxi",
+        mrgRet:"Dona foydasi (%)", mrgOpt:"Optim foydasi (%)", mrgBox:"Karobka foydasi (%)",
+        addLotBtn:"➕ Xaridni Saqlash va Skladga Kirim Qilish", costBase:"Tannarx", extraExp:"Qoʻshimcha xarajat", amt:"Summa", addBtn:"Qoʻshish", totCost:"Jami Tannarx",
+        whTitle:"📋 Sklad, Reyting (⭐) va Aksiya", inWhCol:"Skladda", inMkCol:"Doʻkonda", soldCol:"Sotilgan", ratingCol:"Reyting", promoCol:"Aksiya", makePromo:"🔥 Aksiya (-%)", promoActive:"🔥 Aksiyada", noProd:"Hali tovar yoʻq.",
+        mvTitle:"🔄 Oʻtkazma (Sklad ⇄ Sklad, Sklad ⇄ Doʻkon)", fromLoc:"Qayerdan", toLoc:"Qayerga", selProd:"Tovarni tanlang", confirmMv:"✅ Oʻtkazmani tasdiqlash", mvHist:"📜 Oxirgi Oʻtkazmalar", time:"Vaqt",
+        posProds:"🛒 Doʻkondagi Tovarlar", searchPh:"🔍 Nom yoki shtrix-kod...", posTerm:"🧾 Kassa Terminali (Koʻp tovarli)", saleMode:"Sotuv rejimi", auto:"Avto", unitPr:"1 dona narxi", finalSum:"Yakuniy summa", payMethod:"Toʻlov usuli", cashPay:"💵 Naqd", cardPay:"💳 Karta", mixPay:"🔄 Aralash", debtPay:"📒 Nasiya", custSelect:"Mijozni tanlang", newCustName:"Yangi mijoz ismi", addCartBtn:"➕ Roʻyxatga Qoʻshish", finishSale:"✅ Sotuvni Yakunlash",
+        catTitle:"🛍️ Doʻkon Katalogi", cartTitle:"🧺 Korzinka va Buyurtma", addToCart:"➕ Korzinkaga", emptyCart:"Korzinka boʻsh", sendOrd:"🚀 Buyurtmani Yuborish", myOrds:"📦 Mening Buyurtmalarim",
+        ordTitle:"📦 Xaridor Buyurtmalarini Qabul Qilish", noOrds:"Yangi buyurtmalar yoʻq.", ordWait:"⏳ Kutilmoqda", ordPaid:"💳 Toʻlov tasdiqlandi", ordSent:"✅ Yuborildi", confirmPay:"1. Toʻlov / Nasiyani Tasdiqlash", sendProdBtn:"2. 🚚 Tovarni Yubordik", paidCashLbl:"Olingan Naqd", paidCardLbl:"Olingan Karta", remDebtLbl:"Qolgan Nasiya",
+        handTitle:"🤝 Xoʻjayinga pul topshirish", fromWallet:"Qaysi hamyondan?", note:"Izoh", handBtn:"✅ Topshirildi", mktExpTitle:"💸 Bozor xarajatlari (Rasxod)", reason:"Sabab", expBtn:"➖ Chiqim qilish", lastSales:"🧾 Oxirgi Sotuvlar",
+        debtList:"📒 Mijozlar va Nasiyalar Daftari", addCustTitle:"👤 Yangi Xaridor Qoʻshish", remDebt:"Qolgan qarz", payBtn:"Toʻlash / Olindi", closed:"Yopilgan", retTitle:"🔄 Tovar Qaytarish (Vozvrat)", retQty:"Qaytarilgan dona", retBtn:"🔄 Vozvrat qilish",
+        myLocs:"🏢 Sklad va Doʻkonlar", locName:"Nuqta nomi", type:"Turi", shop:"🏪 Doʻkon", warehouse:"🏭 Sklad", addStaffTitle:"👥 Yangi Xodim Qoʻshish", staffList:"📋 Xodimlar Roʻyxati",
+        subPlan:"Joriy Tarif", remDays:"Qolgan Faol Muddat", bonusDays:"Bonus Kunlar", days:"kun", extSub:"💳 Obunani Uzaytirish", refTitle:"🎁 Promokod va Doʻstlarni Taklif Qilish", copy:"📋 Nusxa", share:"📤 Ulashish",
+        myProf:"👤 Shaxsiy Profilni Tahrirlash", fullName:"Ism / F.I.O", phone:"Telefon / Login", pinCode:"PIN-код (4 raqam)", email:"Email pochta", tgUser:"Telegram (@username)", bioSetup:"🫆 Barmoq izi / Tezkor PIN kirishni yoqish", saveProf:"💾 Profilni Saqlash", brandSet:"🏷️ Brend va Logotip", curSet:"💱 Valyuta Kurslari", saveBtn:"💾 Saqlash", demoBtn:"📦 Namuna Tovarlar Yuklash", delAcc:"🗑️ Akkauntni Oʻchirish",
+        botDesc:"Har bir sotuv, buyurtma va kassa topshirigʻi haqida Telegramga hisobot boradi.", sendRep:"📤 Hisobotni yuborish"
+    },
+    kg: {
+        home:"Башкы бет", buy:"Сатып алуу", trf:"Которуу", wh:"Склад", mk:"Сатуу (POS)", ord:"Буйрутмалар", cat:"Каталог", cash:"Касса", debt:"Кардар & Насия", staff:"Склад & Кызматкер", sub:"Жазылуу", prof:"Профиль", bot:"Бот", lock:"Чыгуу",
+        login:"Кирүү", reg:"Жаңы Дүкөн", custReg:"Кардар Каттоо", bioBtn:"🫆 Манжа изи (PIN) менен кирүү",
+        allLocs:"🌐 Бардык түйүндөр", mainWh:"Негизги Склад", mainMk:"1-Дүкөн (Негизги)",
+        role_boss:"Башчы", role_man:"Менеджер", role_sel:"Сатуучу", role_cust:"Кардар",
+        stWh:"Складдагы товар (тан наркы)", stMk:"Базардагы товар (тан наркы)", stRev:"Жалпы сатуу", stProf:"Таза Пайда", stCash:"Накталай Касса", stCard:"Картадагы акча", stDebt:"Кардарлардагы Насия", stSupDebt:"Завод/Каргого Карызыбыз", stExp:"Базар чыгымдары", stHand:"Тапшырылган акча",
+        startImp:"Баштоо үчүн «Сатып алуу» бөлүмүнөн биринчи партияны киргизиңиз.", statTitle:"📊 Сатуу Статистикасы", disc:"Арзандатуулар", lotsCnt:"Партиялар", salesCnt:"Чектер",
+        box:"коробка", pcs:"даана", prRet:"Даана баасы", prOpt:"Оптом баасы", prBox:"Коробка баасы",
+        impNew:"🛍️ Товар Сатып Алуу & Тан нарк Калькулятору", supTitle:"🏭 Завод / Магазин жана Карго Карыздары", supName:"Кимден алынды (Завод / Магазин)", cargoName:"Карго / Склад", newPartner:"Же жаңы ат...",
+        prodName:"Товардын аты", barcode:"Штрих-код", prodImg:"Товар сүрөтү (Файлдан тандоо)", boxCnt:"Коробка саны", perBox:"1 коробкада даана",
+        buyCur:"Валюта", buyPriceUnit:"Сатып алуу баасы (1 даана)", buyTotalCur:"Жалпы сумма",
+        totKg:"Салмак (кг)", pricePerKg:"1 кг карго баасы", cargoTotal:"Жалпы Карго / Склад",
+        otherExp:"Кошумча чыгым", calcUnitCost:"📌 1 даана так Тан наркы",
+        mrgRet:"Даана пайдасы (%)", mrgOpt:"Оптом пайдасы (%)", mrgBox:"Коробка пайдасы (%)",
+        addLotBtn:"➕ Сатып алууну Сактоо жана Складга Киргизүү", costBase:"Тан наркы", extraExp:"Кошумча чыгым", amt:"Сумма", addBtn:"Кошуу", totCost:"Жалпы Тан нарк",
+        whTitle:"📋 Склад, Рейтинг (⭐) жана Акция", inWhCol:"Складда", inMkCol:"Дүкөндө", soldCol:"Сатылды", ratingCol:"Рейтинг", promoCol:"Акция", makePromo:"🔥 Акция (-%)", promoActive:"🔥 Акцияда", noProd:"Азырынча товар жок.",
+        mvTitle:"🔄 Которуу (Склад ⇄ Склад, Склад ⇄ Дүкөн)", fromLoc:"Кайдан", toLoc:"Кайда", selProd:"Товарды тандаңыз", confirmMv:"✅ Которууну тастыктоо", mvHist:"📜 Акыркы Которуулар", time:"Убакыт",
+        posProds:"🛒 Дүкөндөгү Товарлар", searchPh:"🔍 Аты же штрих-код...", posTerm:"🧾 Касса Терминалы (Көп товарлуу)", saleMode:"Сатуу режими", auto:"Авто", unitPr:"1 даана баасы", finalSum:"Жыйынтык сумма", payMethod:"Төлөм түрү", cashPay:"💵 Накталай", cardPay:"💳 Карта", mixPay:"🔄 Аралаш", debtPay:"📒 Насия", custSelect:"Кардарды тандаңыз", newCustName:"Жаңы кардардын аты", addCartBtn:"➕ Тизмеге Кошуу", finishSale:"✅ Сатууну Аяктоо",
+        catTitle:"🛍️ Дүкөн Каталогу", cartTitle:"🧺 Себет жана Буйрутма", addToCart:"➕ Себетке кошуу", emptyCart:"Себет бош", sendOrd:"🚀 Буйрутма Жиберүү", myOrds:"📦 Менин Буйрутмаларым",
+        ordTitle:"📦 Кардар Буйрутмаларын Кабыл Алуу", noOrds:"Жаңы буйрутмалар жок.", ordWait:"⏳ Күтүүдө", ordPaid:"💳 Төлөм тастыкталды", ordSent:"✅ Жиберилди", confirmPay:"1. Төлөм / Насияны Тастыктоо", sendProdBtn:"2. 🚚 Товарды Жибердик", paidCashLbl:"Алынган Накталай", paidCardLbl:"Алынган Карта", remDebtLbl:"Калган Насия",
+        handTitle:"🤝 Башчыга акча тапшыруу", fromWallet:"Кайсы капчыктан?", note:"Түшүндүрмө", handBtn:"✅ Тапшырылды", mktExpTitle:"💸 Базар чыгымдары (Расход)", reason:"Себеби", expBtn:"➖ Чыгымдоо", lastSales:"🧾 Акыркы Сатуулар",
+        debtList:"📒 Кардарлар жана Насия Дептери", addCustTitle:"👤 Жаңы Кардар Кошуу", remDebt:"Калган карыз", payBtn:"Төлөө / Алынды", closed:"Жабылган", retTitle:"🔄 Товар Кайтаруу (Возврат)", retQty:"Кайтарылган даана", retBtn:"🔄 Возврат кылуу",
+        myLocs:"🏢 Склад жана Дүкөндөр", locName:"Түйүн аты", type:"Түрү", shop:"🏪 Дүкөн", warehouse:"🏭 Склад", addStaffTitle:"👥 Жаңы Кызматкер Кошуу", staffList:"📋 Кызматкерлер Тизмеси",
+        subPlan:"Учурдагы Тариф", remDays:"Калган Мөөнөт", bonusDays:"Бонус Күндөр", days:"күн", extSub:"💳 Жазылууну Узартуу", refTitle:"🎁 Промокод жана Досторду Чакыруу", copy:"📋 Көчүрүү", share:"📤 Бөлүшүү",
+        myProf:"👤 Жеке Профилди Түзөтүү", fullName:"Аты-жөнү", phone:"Телефон / Логин", pinCode:"PIN-код (4 сан)", email:"Email почта", tgUser:"Telegram (@username)", bioSetup:"🫆 Манжа изи / Тез кирүүнү күйгүзүү", saveProf:"💾 Профилди Сактоо", brandSet:"🏷️ Бренд жана Логотип", curSet:"💱 Валюта Курстары", saveBtn:"💾 Сактоо", demoBtn:"📦 Үлгү Товарларды Жүктөө", delAcc:"🗑️ Аккаунтту Өчүрүү",
+        botDesc:"Ар бир сатуу жана буйрутма боюнча Telegram'га маалымат барат.", sendRep:"📤 Отчет жиберүү"
+    },
+    ru: {
+        home:"Главная", buy:"Закуп товара", trf:"Перемещение", wh:"Склад", mk:"Продажа (POS)", ord:"Заказы", cat:"Каталог", cash:"Касса", debt:"Клиенты и Долги", staff:"Склады и Штат", sub:"Подписка", prof:"Профиль", bot:"Бот", lock:"Выход",
+        login:"Вход", reg:"Новый Магазин", custReg:"Я Покупатель", bioBtn:"🫆 Вход по отпечатку (PIN)",
+        allLocs:"🌐 Все точки", mainWh:"Основной Склад", mainMk:"Магазин №1",
+        role_boss:"Босс", role_man:"Менеджер", role_sel:"Продавец", role_cust:"Покупатель",
+        stWh:"Товар на складе (себест.)", stMk:"Товар в магазине (себест.)", stRev:"Общая выручка", stProf:"Чистая Прибыль", stCash:"Наличная Касса", stCard:"На карте", stDebt:"Долги клиентов", stSupDebt:"Наш долг Заводам/Карго", stExp:"Расходы точки", stHand:"Сдано боссу",
+        startImp:"Для начала добавьте первую партию в разделе «Закуп товара».", statTitle:"📊 Статистика Продаж", disc:"Скидки", lotsCnt:"Партий", salesCnt:"Чеков",
+        box:"короб.", pcs:"шт", prRet:"Розничная", prOpt:"Оптовая", prBox:"За коробку",
+        impNew:"🛍️ Закуп Товара и Калькулятор Себестоимости", supTitle:"🏭 База Заводов и Карго (Наши Долги)", supName:"У кого купили (Завод / Магазин)", cargoName:"Карго / Склад", newPartner:"Или новое имя...",
+        prodName:"Название товара", barcode:"Штрих-код", prodImg:"Фото товара (Файл)", boxCnt:"Кол-во коробок", perBox:"Штук в коробке",
+        buyCur:"Валюта", buyPriceUnit:"Цена закупа (1 шт)", buyTotalCur:"Сумма",
+        totKg:"Вес (кг)", pricePerKg:"Цена 1 кг карго", cargoTotal:"Итого Карго",
+        otherExp:"Доп. расход", calcUnitCost:"📌 Точная себестоимость 1 шт",
+        mrgRet:"Наценка Розница (%)", mrgOpt:"Наценка Опт (%)", mrgBox:"Наценка Коробка (%)",
+        addLotBtn:"➕ Сохранить Закуп и Оприходовать на Склад", costBase:"Себестоимость", extraExp:"Доп. расход", amt:"Сумма", addBtn:"Добавить", totCost:"Итого Себестоимость",
+        whTitle:"📋 Склад, Рейтинг (⭐) и Акции", inWhCol:"На складе", inMkCol:"В магазине", soldCol:"Продано", ratingCol:"Рейтинг", promoCol:"Акция", makePromo:"🔥 В Акцию (-%)", promoActive:"🔥 Акция", noProd:"Товаров пока нет.",
+        mvTitle:"🔄 Перемещение (Между Складами и Магазинами)", fromLoc:"Откуда", toLoc:"Куда", selProd:"Выберите товар", confirmMv:"✅ Подтвердить перемещение", mvHist:"📜 История перемещений", time:"Время",
+        posProds:"🛒 Товары на Витрине", searchPh:"🔍 Поиск по коду или названию...", posTerm:"🧾 Кассовый Терминал (Мульти-чек)", saleMode:"Режим цены", auto:"Авто", unitPr:"Цена за 1 шт", finalSum:"Итого к оплате", payMethod:"Способ оплаты", cashPay:"💵 Наличные", cardPay:"💳 Карта", mixPay:"🔄 Смешанный", debtPay:"📒 В долг", custSelect:"Выберите клиента", newCustName:"Имя нового клиента", addCartBtn:"➕ Добавить в чек", finishSale:"✅ Завершить Продажу",
+        catTitle:"🛍️ Каталог Магазина", cartTitle:"🧺 Корзина и Заказ", addToCart:"➕ В корзину", emptyCart:"Корзина пуста", sendOrd:"🚀 Отправить Заказ", myOrds:"📦 Мои Заказы",
+        ordTitle:"📦 Прием Заказов от Покупателей", noOrds:"Новых заказов нет.", ordWait:"⏳ Ожидает", ordPaid:"💳 Оплата/Долг подтвержден", ordSent:"✅ Отправлено", confirmPay:"1. Подтвердить Оплату / Долг", sendProdBtn:"2. 🚚 Отправить товар", paidCashLbl:"Принято Наличными", paidCardLbl:"Принято на Карту", remDebtLbl:"Остаток в Долг (Насия)",
+        handTitle:"🤝 Сдать выручку Боссу", fromWallet:"Из какого кошелька?", note:"Примечание", handBtn:"✅ Сдано", mktExpTitle:"💸 Расходы магазина", reason:"Причина", expBtn:"➖ Списать расход", lastSales:"🧾 Последние Продажи",
+        debtList:"📒 База Клиентов и Долгов", addCustTitle:"👤 Добавить Покупателя", remDebt:"Остаток долга", payBtn:"Оплатить / Принять", closed:"Закрыт", retTitle:"🔄 Возврат Товара", retQty:"Кол-во возврата (шт)", retBtn:"🔄 Оформить возврат",
+        myLocs:"🏢 Склады и Магазины", locName:"Название точки", type:"Тип", shop:"🏪 Магазин", warehouse:"🏭 Склад", addStaffTitle:"👥 Добавить Сотрудника", staffList:"📋 Список Сотрудников",
+        subPlan:"Текущий Тариф", remDays:"Осталось дней", bonusDays:"Бонусные дни", days:"дн.", extSub:"💳 Продлить Подписку", refTitle:"🎁 Промокод и Бонусы", copy:"📋 Копировать", share:"📤 Поделиться",
+        myProf:"👤 Редактировать Личный Профиль", fullName:"Имя / Ф.И.О", phone:"Телефон / Логин", pinCode:"PIN-код (4 цифры)", email:"Email почта", tgUser:"Telegram (@username)", bioSetup:"🫆 Включить вход по отпечатку / быстрый вход", saveProf:"💾 Сохранить Профиль", brandSet:"🏷️ Бренд и Логотип", curSet:"💱 Курсы Валют", saveBtn:"💾 Сохранить", demoBtn:"📦 Загрузить Демо Товары", delAcc:"🗑️ Удалить Аккаунт",
+        botDesc:"Отчеты о продажах и заказах в Telegram.", sendRep:"📤 Отправить отчет"
+    },
+    en: {
+        home:"Dashboard", buy:"Purchasing", trf:"Transfer", wh:"Warehouse", mk:"POS Sales", ord:"Orders", cat:"Catalog", cash:"Cashbox", debt:"Clients & Debts", staff:"Locations & Staff", sub:"Subscription", prof:"Profile", bot:"Bot", lock:"Logout",
+        login:"Sign In", reg:"New Store", custReg:"Customer Sign Up", bioBtn:"🫆 Touch ID / Quick PIN Login",
+        allLocs:"🌐 All locations", mainWh:"Main Warehouse", mainMk:"Store #1 (Main)",
+        role_boss:"Boss", role_man:"Manager", role_sel:"Seller", role_cust:"Customer",
+        stWh:"Warehouse Stock (Cost)", stMk:"Store Stock (Cost)", stRev:"Total Sales", stProf:"Net Profit", stCash:"Cash Balance", stCard:"Card Balance", stDebt:"Customer Debts", stSupDebt:"Payables to Suppliers", stExp:"Store Expenses", stHand:"Handed Over",
+        startImp:"To start, add your first batch in the Purchasing section.", statTitle:"📊 Sales Statistics", disc:"Discounts", lotsCnt:"Batches", salesCnt:"Receipts",
+        box:"boxes", pcs:"pcs", prRet:"Retail", prOpt:"Wholesale", prBox:"Box Price",
+        impNew:"🛍️ Product Purchasing & Landed Cost Calculator", supTitle:"🏭 Suppliers & Cargo Payables", supName:"Supplier / Factory", cargoName:"Cargo / Warehouse", newPartner:"Or new name...",
+        prodName:"Product Name", barcode:"Barcode / SKU", prodImg:"Product Photo (File)", boxCnt:"Box Count", perBox:"Pcs per Box",
+        buyCur:"Currency", buyPriceUnit:"Buy Price (per 1 pc)", buyTotalCur:"Total Amount",
+        totKg:"Weight (kg)", pricePerKg:"Cargo Rate per kg", cargoTotal:"Total Cargo Cost",
+        otherExp:"Extra Costs", calcUnitCost:"📌 Exact Unit Landed Cost",
+        mrgRet:"Retail Markup (%)", mrgOpt:"Wholesale Markup (%)", mrgBox:"Box Markup (%)",
+        addLotBtn:"➕ Save Purchase & Add to Warehouse", costBase:"Unit Cost", extraExp:"Extra Cost", amt:"Amount", addBtn:"Add", totCost:"Total Cost Base",
+        whTitle:"📋 Warehouse, Star Rating (⭐) & Promotions", inWhCol:"In Warehouse", inMkCol:"In Store", soldCol:"Sold", ratingCol:"Rating", promoCol:"Promo", makePromo:"🔥 Promo (-%)", promoActive:"🔥 On Promo", noProd:"No products yet.",
+        mvTitle:"🔄 Stock Transfer (Between Warehouses & Stores)", fromLoc:"From", toLoc:"To", selProd:"Select Product", confirmMv:"✅ Confirm Transfer", mvHist:"📜 Recent Transfers", time:"Time",
+        posProds:"🛒 Store Products", searchPh:"🔍 Search name or barcode...", posTerm:"🧾 POS Terminal (Multi-item)", saleMode:"Price Mode", auto:"Auto", unitPr:"Unit Price", finalSum:"Final Total", payMethod:"Payment Method", cashPay:"💵 Cash", cardPay:"💳 Card", mixPay:"🔄 Mixed", debtPay:"📒 On Credit", custSelect:"Select Customer", newCustName:"New Customer Name", addCartBtn:"➕ Add to Cart", finishSale:"✅ Complete Sale",
+        catTitle:"🛍️ Store Catalog", cartTitle:"🧺 Shopping Cart & Order", addToCart:"➕ Add to Cart", emptyCart:"Cart is empty", sendOrd:"🚀 Place Order", myOrds:"📦 My Orders",
+        ordTitle:"📦 Customer Orders Management", noOrds:"No orders yet.", ordWait:"⏳ Pending", ordPaid:"💳 Payment Confirmed", ordSent:"✅ Shipped", confirmPay:"1. Confirm Payment / Credit", sendProdBtn:"2. 🚚 Mark as Shipped", paidCashLbl:"Paid Cash", paidCardLbl:"Paid Card", remDebtLbl:"Remaining Credit (Debt)",
+        handTitle:"🤝 Hand Over Cash to Boss", fromWallet:"From Wallet", note:"Note", handBtn:"✅ Hand Over", mktExpTitle:"💸 Store Expenses", reason:"Reason", expBtn:"➖ Record Expense", lastSales:"🧾 Recent Sales",
+        debtList:"📒 Customers & Credit Book", addCustTitle:"👤 Register Customer", remDebt:"Balance Due", payBtn:"Pay / Receive", closed:"Paid", retTitle:"🔄 Product Return", retQty:"Returned Pcs", retBtn:"🔄 Process Return",
+        myLocs:"🏢 Warehouses & Stores", locName:"Location Name", type:"Type", shop:"🏪 Store", warehouse:"🏭 Warehouse", addStaffTitle:"👥 Add Staff Member", staffList:"📋 Staff List",
+        subPlan:"Current Plan", remDays:"Active Days Left", bonusDays:"Bonus Days", days:"days", extSub:"💳 Extend Subscription", refTitle:"🎁 Promo Code & Referrals", copy:"📋 Copy", share:"📤 Share",
+        myProf:"👤 Edit Personal Profile", fullName:"Full Name", phone:"Phone / Login", pinCode:"PIN Code (4 digits)", email:"Email Address", tgUser:"Telegram (@username)", bioSetup:"🫆 Enable Touch ID / Quick Login", saveProf:"💾 Save Profile", brandSet:"🏷️ Brand & Logo", curSet:"💱 Currency Rates", saveBtn:"💾 Save", demoBtn:"📦 Load Demo Sports Goods", delAcc:"🗑️ Delete Account",
+        botDesc:"Get instant Telegram reports on sales and orders.", sendRep:"📤 Send Report"
+    },
+    zh: {
+        home:"主页", buy:"采购入库", trf:"调拨", wh:"仓库", mk:"收银 (POS)", ord:"客户订单", cat:"商品目录", cash:"金库", debt:"客户与欠款", staff:"分店与员工", sub:"订阅", prof:"个人资料", bot:"机器人", lock:"退出",
+        login:"登录", reg:"开设新店", custReg:"买家注册", bioBtn:"🫆 指纹 / PIN 快捷登录",
+        allLocs:"🌐 所有分店", mainWh:"主仓库", mainMk:"1号门店",
+        role_boss:"老板", role_man:"经理", role_sel:"销售员", role_cust:"买家",
+        stWh:"仓库库存 (成本)", stMk:"门店库存 (成本)", stRev:"总销售额", stProf:"净利润", stCash:"现金余额", stCard:"银行卡", stDebt:"客户欠款", stSupDebt:"应付供应商欠款", stExp:"门店支出", stHand:"已交老板",
+        startImp:"请先在“采购入库”页面添加第一批货物。", statTitle:"📊 销售统计", disc:"折扣", lotsCnt:"批次", salesCnt:"单据",
+        box:"箱", pcs:"件", prRet:"零售价", prOpt:"批发价", prBox:"整箱价",
+        impNew:"🛍️ 采购入库与成本核算器", supTitle:"🏭 厂家与物流应付账款", supName:"供应商 / 厂家", cargoName:"物流 / 仓库", newPartner:"或新名称...",
+        prodName:"商品名称", barcode:"条形码", prodImg:"商品图片 (文件)", boxCnt:"箱数", perBox:"每箱件数",
+        buyCur:"币种", buyPriceUnit:"采购单价", buyTotalCur:"总金额",
+        totKg:"重量 (kg)", pricePerKg:"每公斤运费", cargoTotal:"物流总费",
+        otherExp:"其他费用", calcUnitCost:"📌 单件落地成本",
+        mrgRet:"零售利润率 (%)", mrgOpt:"批发利润率 (%)", mrgBox:"整箱利润率 (%)",
+        addLotBtn:"➕ 保存采购并入库", costBase:"单件成本", extraExp:"附加费", amt:"金额", addBtn:"添加", totCost:"总成本",
+        whTitle:"📋 仓库、星级评定 (⭐) 与促销", inWhCol:"仓库存量", inMkCol:"门店存量", soldCol:"已售", ratingCol:"畅销星级", promoCol:"促销", makePromo:"🔥 设为促销 (-%)", promoActive:"🔥 促销中", noProd:"暂无商品",
+        mvTitle:"🔄 库存调拨 (仓库与门店之间)", fromLoc:"调出", toLoc:"调入", selProd:"选择商品", confirmMv:"✅ 确认调拨", mvHist:"📜 调拨记录", time:"时间",
+        posProds:"🛒 门店在售商品", searchPh:"🔍 搜索名称或条码...", posTerm:"🧾 收银终端 (多商品清单)", saleMode:"价格模式", auto:"自动", unitPr:"单价", finalSum:"应收总额", payMethod:"付款方式", cashPay:"💵 现金", cardPay:"💳 刷卡", mixPay:"🔄 混合", debtPay:"📒 赊账", custSelect:"选择客户", newCustName:"新客户姓名", addCartBtn:"➕ 加入清单", finishSale:"✅ 完成销售",
+        catTitle:"🛍️ 商品目录", cartTitle:"🧺 购物车与下单", addToCart:"➕ 加入购物车", emptyCart:"购物车为空", sendOrd:"🚀 提交订单", myOrds:"📦 我的订单",
+        ordTitle:"📦 客户订单管理", noOrds:"暂无订单", ordWait:"⏳ 待处理", ordPaid:"💳 已确认收款/赊账", ordSent:"✅ 已发货", confirmPay:"1. 确认收款 / 赊账", sendProdBtn:"2. 🚚 标记已发货", paidCashLbl:"实收现金", paidCardLbl:"实收转账", remDebtLbl:"赊账金额",
+        handTitle:"🤝 上交营业款", fromWallet:"付款账户", note:"备注", handBtn:"✅ 确认上交", mktExpTitle:"💸 门店日常支出", reason:"原因", expBtn:"➖ 记录支出", lastSales:"🧾 最近销售",
+        debtList:"📒 客户与赊账本", addCustTitle:"👤 新增客户", remDebt:"剩余欠款", payBtn:"收款/付款", closed:"已结清", retTitle:"🔄 客户退货", retQty:"退货件数", retBtn:"🔄 确认退货",
+        myLocs:"🏢 仓库与门店管理", locName:"网点名称", type:"类型", shop:"🏪 门店", warehouse:"🏭 仓库", addStaffTitle:"👥 新增员工", staffList:"📋 员工列表",
+        subPlan:"当前套餐", remDays:"剩余天数", bonusDays:"奖励天数", days:"天", extSub:"💳 续费订阅", refTitle:"🎁 推荐码与奖励", copy:"📋 复制", share:"📤 分享",
+        myProf:"👤 编辑个人资料", fullName:"姓名", phone:"手机号 / 账号", pinCode:"PIN码 (4位)", email:"电子邮箱", tgUser:"Telegram (@username)", bioSetup:"🫆 启用指纹/快捷登录", saveProf:"💾 保存个人资料", brandSet:"🏷️ 品牌与标志", curSet:"💱 汇率设置", saveBtn:"💾 保存", demoBtn:"📦 载入演示商品", delAcc:"🗑️ 删除账户",
+        botDesc:"通过 Telegram 接收销售与订单通知。", sendRep:"📤 发送今日报表"
+    },
+    kz: {
+        home:"Басты бет", buy:"Сатып алу", trf:"Көшіру", wh:"Қойма", mk:"Сату (POS)", ord:"Тапсырыстар", cat:"Каталог", cash:"Касса", debt:"Клиент & Қарыз", staff:"Қойма & Штат", sub:"Жазылым", prof:"Профиль", bot:"Бот", lock:"Шығу",
+        login:"Кирүү", reg:"Жаңа Дүкен", custReg:"Сатып алушы тіркелуі", bioBtn:"🫆 Саусақ ізімен (PIN) кіру",
+        allLocs:"🌐 Барлық нүктелер", mainWh:"Негізгі Қойма", mainMk:"1-Дүкен (Негізгий)",
+        role_boss:"Басшы", role_man:"Менеджер", role_sel:"Сатушы", role_cust:"Сатып алушы",
+        stWh:"Қоймадағы тауар (өзіндік құны)", stMk:"Дүкендегі тауар (өзіндік құны)", stRev:"Жалпы сатылым", stProf:"Таза Пайда", stCash:"Қолма-қол Касса", stCard:"Картадағы ақша", stDebt:"Клиенттер қарызы", stSupDebt:"Зауыт/Каргоға Қарызымыз", stExp:"Дүкен шығындары", stHand:"Тапсырылған ақша",
+        startImp:"Бастау үшін «Сатып алу» бөлімінде бірінші партияны енгізіңіз.", statTitle:"📊 Сату Статистикасы", disc:"Жеңілдіктер", lotsCnt:"Партиялар", salesCnt:"Чектер",
+        box:"қорап", pcs:"дана", prRet:"Бөлшек баға", prOpt:"Көтерме баға", prBox:"Қорап бағасы",
+        impNew:"🛍️ Тауар Сатып Алу және Өзіндік Құн Калькуляторы", supTitle:"🏭 Зауыт және Карго Қарыздары", supName:"Кімнен алынды (Зауыт)", cargoName:"Карго / Қойма", newPartner:"Немесе жаңа ат...",
+        prodName:"Тауар атауы", barcode:"Штрих-код", prodImg:"Тауар суреті (Файл)", boxCnt:"Қорап саны", perBox:"1 қорапта дана",
+        buyCur:"Валюта", buyPriceUnit:"Сатып алу бағасы (1 дана)", buyTotalCur:"Жалпы сома",
+        totKg:"Салмак (кг)", pricePerKg:"1 кг карго бағасы", cargoTotal:"Жалпы Карго",
+        otherExp:"Қосымша шығын", calcUnitCost:"📌 1 дана нақты Өзіндік құны",
+        mrgRet:"Бөлшек пайда (%)", mrgOpt:"Көтерме пайда (%)", mrgBox:"Қорап пайдасы (%)",
+        addLotBtn:"➕ Сатып алуды Сақтау және Қоймаға Енгізу", costBase:"Өзіндік құн", extraExp:"Қосымша шығын", amt:"Сома", addBtn:"Қосу", totCost:"Жалпы Өзіндік құн",
+        whTitle:"📋 Қойма, Рейтинг (⭐) және Акция", inWhCol:"Қоймада", inMkCol:"Дүкенде", soldCol:"Сатылды", ratingCol:"Рейтинг", promoCol:"Акция", makePromo:"🔥 Акция (-%)", promoActive:"🔥 Акцияда", noProd:"Әзірге тауар жоқ.",
+        mvTitle:"🔄 Көшіру (Қойма мен Дүкендер арасында)", fromLoc:"Қайдан", toLoc:"Қайда", selProd:"Тауарды таңдаңыз", confirmMv:"✅ Көшіруді растау", mvHist:"📜 Соңғы Көшірулер", time:"Уақыт",
+        posProds:"🛒 Дүкендегі Тауарлар", searchPh:"🔍 Атауы немесе штрих-код...", posTerm:"🧾 Касса Терминалы (Мульти-чек)", saleMode:"Сату режимі", auto:"Авто", unitPr:"1 дана бағасы", finalSum:"Қорытынды сома", payMethod:"Төлем түрі", cashPay:"💵 Қолма-қол", cardPay:"💳 Карта", mixPay:"🔄 Аралас", debtPay:"📒 Қарызға", custSelect:"Клиентті таңдаңыз", newCustName:"Жаңа клиент аты", addCartBtn:"➕ Тізімге Қосу", finishSale:"✅ Сатуды Аяқтау",
+        catTitle:"🛍️ Дүкен Каталогы", cartTitle:"🧺 Себет және Тапсырыс", addToCart:"➕ Себетке", emptyCart:"Себет бос", sendOrd:"🚀 Тапсырыс Жіберу", myOrds:"📦 Менің Тапсырыстарым",
+        ordTitle:"📦 Сатып алушы Тапсырыстарын Қабылдау", noOrds:"Жаңа тапсырыстар жоқ.", ordWait:"⏳ Күтілуде", ordPaid:"💳 Төлем расталды", ordSent:"✅ Жиберилди", confirmPay:"1. Төлем / Қарызды Растау", sendProdBtn:"2. 🚚 Тауарды Жібердік", paidCashLbl:"Алынған Қолма-қол", paidCardLbl:"Алынған Карта", remDebtLbl:"Қалған Қарыз",
+        handTitle:"🤝 Басшыға ақша тапсыру", fromWallet:"Қай әмияннан?", note:"Ескертпе", handBtn:"✅ Тапсырылды", mktExpTitle:"💸 Дүкен шығындары", reason:"Себеби", expBtn:"➖ Шығыс ету", lastSales:"🧾 Соңғы Сатылымдар",
+        debtList:"📒 Клиенттер мен Қарыздар Дәптері", addCustTitle:"👤 Жаңа Сатып алушы Қосу", remDebt:"Қалған қарыз", payBtn:"Төлеу / Алынды", closed:"Жабылған", retTitle:"🔄 Тауар Қайтару (Возврат)", retQty:"Қайтарылған дана", retBtn:"🔄 Қайтаруды рәсімдеу",
+        myLocs:"🏢 Қойма мен Дүкендер", locName:"Нүкте атауы", type:"Түрі", shop:"🏪 Дүкен", warehouse:"🏭 Қойма", addStaffTitle:"👥 Жаңа Қызметкер Қосу", staffList:"📋 Қызметкерлер Тізімі",
+        subPlan:"Ағымдағы Тариф", remDays:"Қалған Күндер", bonusDays:"Бонус Күндер", days:"күн", extSub:"💳 Жазылымды Ұзарту", refTitle:"🎁 Промокод және Достарды Шақыру", copy:"📋 Көшіру", share:"📤 Бөлісу",
+        myProf:"👤 Жеке Профильді Өңдеу", fullName:"Аты-жөні", phone:"Телефон / Логин", pinCode:"PIN-код (4 сан)", email:"Email пошта", tgUser:"Telegram (@username)", bioSetup:"🫆 Саусақ ізімен кіруді қосу", saveProf:"💾 Профильді Сақтау", brandSet:"🏷️ Бренд және Логотип", curSet:"💱 Валюта Бағамдары", saveBtn:"💾 Сақтау", demoBtn:"📦 Демо Тауарларды Жүктеу", delAcc:"🗑️ Аккаунтты Жою",
+        botDesc:"Сатылымдар мен тапсырыстар туралы Telegram-ға есеп барады.", sendRep:"📤 Есепті жіберу"
+    },
+    tj: {
+        home:"Асосӣ", buy:"Харид", trf:"Интиқол", wh:"Анбор", mk:"Фурӯш (POS)", ord:"Фармоишҳо", cat:"Каталог", cash:"Хазина", debt:"Мизоҷ ва Қарз", staff:"Анбор ва Корманд", sub:"Обуна", prof:"Профил", bot:"Бот", lock:"Баромад",
+        login:"Воридшавӣ", reg:"Дӯкони Нав", custReg:"Сабти Харидор", bioBtn:"🫆 Воридшавӣ бо изи ангушт (PIN)",
+        allLocs:"🌐 Ҳамаи нуқтаҳо", mainWh:"Анбори Асосӣ", mainMk:"Дӯкони №1",
+        role_boss:"Роҳбар", role_man:"Менеҷер", role_sel:"Фурӯшанда", role_cust:"Харидор",
+        stWh:"Моли анбор (арзиши аслӣ)", stMk:"Моли дӯкон (арзиши аслӣ)", stRev:"Фурӯши умумӣ", stProf:"Фоидаи Соф", stCash:"Нақди Хазина", stCard:"Дар корт", stDebt:"Қарзи мизоҷон", stSupDebt:"Қарзи мо аз Завод/Карго", stExp:"Хароҷоти бозор", stHand:"Супорида шуд",
+        startImp:"Барои оғоз дар қисми «Харид» партияи аввалро ворид кунед.", statTitle:"📊 Омори Фурӯш", disc:"Тахфифҳо", lotsCnt:"Партияҳо", salesCnt:"Чекҳо",
+        box:"қуттӣ", pcs:"дона", prRet:"Нархи дона", prOpt:"Нархи яклухт", prBox:"Нархи қуттӣ",
+        impNew:"🛍️ Хариди Мол ва Ҳисобкунаки Арзиши Аслӣ", supTitle:"🏭 Рӯйхати Завод ва Карго (Қарзҳои Мо)", supName:"Аз кӣ харида шуд (Завод)", cargoName:"Карго / Анбор", newPartner:"Ё номи нав...",
+        prodName:"Номи мол", barcode:"Штрих-код", prodImg:"Расми мол (Файл)", boxCnt:"Шумораи қуттӣ", perBox:"Дона дар 1 қуттӣ",
+        buyCur:"Асъор", buyPriceUnit:"Нархи харид (1 дона)", buyTotalCur:"Маблағи умумӣ",
+        totKg:"Вазн (кг)", pricePerKg:"Нархи 1 кг карго", cargoTotal:"Ҳамагӣ Карго",
+        otherExp:"Хароҷоти иловагӣ", calcUnitCost:"📌 Арзиши аслии дақиқи 1 дона",
+        mrgRet:"Фоидаи дона (%)", mrgOpt:"Фоидаи яклухт (%)", mrgBox:"Фоидаи қуттӣ (%)",
+        addLotBtn:"➕ Сабти Харид ва Ворид ба Анбор", costBase:"Арзиши аслӣ", extraExp:"Хароҷоти иловагӣ", amt:"Маблағ", addBtn:"Илова", totCost:"Ҳамагӣ Арзиши Аслӣ",
+        whTitle:"📋 Анбор, Рейтинг (⭐) ва Аксияҳо", inWhCol:"Дар анбор", inMkCol:"Дар дӯкон", soldCol:"Фурӯхта шуд", ratingCol:"Рейтинг", promoCol:"Аксия", makePromo:"🔥 Ба Аксия (-%)", promoActive:"🔥 Дар аксия", noProd:"Ҳоло мол нест.",
+        mvTitle:"🔄 Интиқол (Дар байни Анборҳо ва Дӯконҳо)", fromLoc:"Аз куҷо", toLoc:"Ба куҷо", selProd:"Молро интихоб кунед", confirmMv:"✅ Тасдиқи интиқол", mvHist:"📜 Таърихи интиқол", time:"Вақт",
+        posProds:"🛒 Молҳои Дӯкон", searchPh:"🔍 Ҷустуҷӯ бо ном ё код...", posTerm:"🧾 Терминали Хазина (Мульти-чек)", saleMode:"Реҷаи фурӯш", auto:"Авто", unitPr:"Нархи 1 дона", finalSum:"Маблағи ниҳоӣ", payMethod:"Усули пардохт", cashPay:"💵 Нақд", cardPay:"💳 Корт", mixPay:"🔄 Омехта", debtPay:"📒 Ба қарз", custSelect:"Мизоҷро интихоб кунед", newCustName:"Номи мизоҷи нав", addCartBtn:"➕ Илова ба чек", finishSale:"✅ Анҷоми Фурӯш",
+        catTitle:"🛍️ Каталоги Дӯкон", cartTitle:"🧺 Сабад ва Фармоиш", addToCart:"➕ Ба сабад", emptyCart:"Сабад холист", sendOrd:"🚀 Фиристодани Фармоиш", myOrds:"📦 Фармоишҳои Ман",
+        ordTitle:"📦 Қабули Фармоишҳои Харидорон", noOrds:"Фармоишҳои нав нест.", ordWait:"⏳ Интизорӣ", ordPaid:"💳 Пардохт тасдиқ шуд", ordSent:"✅ Фиристода шуд", confirmPay:"1. Тасдиқи Пардохт / Қарз", sendProdBtn:"2. 🚚 Молро Фиристодем", paidCashLbl:"Гирифта шуд (Нақд)", paidCardLbl:"Гирифта шуд (Корт)", remDebtLbl:"Боқимонда ба Қарз",
+        handTitle:"🤝 Супоридани пул ба Роҳбар", fromWallet:"Аз кадом ҳамён?", note:"Эзоҳ", handBtn:"✅ Супорида шуд", mktExpTitle:"💸 Хароҷоти дӯкон", reason:"Сабаб", expBtn:"➖ Сабти хароҷот", lastSales:"🧾 Фурӯшҳои Охирин",
+        debtList:"📒 Дафтари Мизоҷон ва Қарзҳо", addCustTitle:"👤 Иловаи Харидори Нав", remDebt:"Қарзи боқимонда", payBtn:"Пардохт / Қабул", closed:"Пӯшида", retTitle:"🔄 Бозгашти Мол (Возврат)", retQty:"Донаи баргашта", retBtn:"🔄 Сабти бозгашт",
+        myLocs:"🏢 Анбор ва Дӯконҳо", locName:"Номи нуқта", type:"Навъ", shop:"🏪 Дӯкон", warehouse:"🏭 Анбор", addStaffTitle:"👥 Иловаи Корманд", staffList:"📋 Рӯйхати Кормандон",
+        subPlan:"Тарифи Ҷорӣ", remDays:"Рӯзҳои Фаъол", bonusDays:"Бонус Дӯст", days:"рӯз", extSub:"💳 Дароз кардани Обуна", refTitle:"🎁 Промокод ва Даъвати Дӯстон", copy:"📋 Нусха", share:"📤 Мубодила",
+        myProf:"👤 Таҳрири Профили Шахсӣ", fullName:"Ному насаб", phone:"Телефон / Логин", pinCode:"PIN-код (4 рақам)", email:"Почтаи Email", tgUser:"Telegram (@username)", bioSetup:"🫆 Фаъолсозии изи ангушт / PIN", saveProf:"💾 Захираи Профил", brandSet:"🏷️ Бренд ва Логотип", curSet:"💱 Қурби Асъор", saveBtn:"💾 Захира", demoBtn:"📦 Боргирии Молҳои Намунавӣ", delAcc:"🗑️ Нест кардани Аккаунт",
+        botDesc:"Ҳисоботи фурӯш ва фармоишҳо ба Telegram меравад.", sendRep:"📤 Фиристодани ҳисобот"
+    }
+};
+
+/* =========================================================
+   2. BAZA VA DOIMIY XOTIRA
+   ========================================================= */
+const KEY = "bozor-hisobi-v1";
+const PREF_LANG = localStorage.getItem(KEY + "-lang") || "uz";
+const PREF_CUR  = localStorage.getItem(KEY + "-cur")  || "UZS";
+
+let S = {
+    brand: { name: "Bozor hisobi", logo: "", shopId: "849201", promoBy: "" },
+    locs: [
+        { id: "wh1", name: "Asosiy Sklad", type: "wh" },
+        { id: "mk1", name: "1-Doʻkon (Asosiy)", type: "mk" }
+    ],
+    sups: [
+        { id: "sp1", name: "Matiz Zavod / Magazin", type: "sup", debtUZS: 0 },
+        { id: "cg1", name: "Fayzstar Cargo (Ombor)", type: "cargo", debtUZS: 0 }
+    ],
+    lots: [], moves: [], sales: [], hand: [], mexp: [],
+    users: [], co: [], ord: [], cart: [],
+    rate: { UZS: 1, KGS: 145, USD: 12600, CNY: 1750, RUB: 135, KZT: 26, TJS: 1150 },
+    sub: { plan: "Sinov (Trial)", until: Date.now() + 14 * 864e5, bonusDays: 0, refs: 0 },
+    bot: { token: "", chatId: "" },
+    cur: PREF_CUR, lang: PREF_LANG
+};
+
+try {
+    const d = localStorage.getItem(KEY);
+    if (d) {
+        const parsed = JSON.parse(d);
+        S = Object.assign(S, parsed);
+        if (!S.locs || !S.locs.length) S.locs = [{ id: "wh1", name: "Asosiy Sklad", type: "wh" }, { id: "mk1", name: "1-Doʻkon (Asosiy)", type: "mk" }];
+        if (!S.sups || !S.sups.length) S.sups = [
+            { id: "sp1", name: "Matiz Zavod / Magazin", type: "sup", debtUZS: 0 },
+            { id: "cg1", name: "Fayzstar Cargo (Ombor)", type: "cargo", debtUZS: 0 }
+        ];
+        if (!S.mexp) S.mexp = [];
+        if (!S.co) S.co = [];
+        if (!S.ord) S.ord = [];
+        if (!S.cart) S.cart = [];
+        if (!S.rate || !S.rate.KGS) S.rate = { UZS: 1, KGS: 145, USD: 12600, CNY: 1750, RUB: 135, KZT: 26, TJS: 1150 };
+        if (!S.rate.TJS) S.rate.TJS = 1150;
+    }
+} catch(e) {}
+
+if (localStorage.getItem(KEY + "-lang")) S.lang = localStorage.getItem(KEY + "-lang");
+if (localStorage.getItem(KEY + "-cur"))  S.cur  = localStorage.getItem(KEY + "-cur");
+
+const $ = id => document.getElementById(id);
+const save = () => {
+    try {
+        localStorage.setItem(KEY, JSON.stringify(S));
+        localStorage.setItem(KEY + "-lang", S.lang);
+        localStorage.setItem(KEY + "-cur", S.cur);
+    } catch(e) {}
+};
+const setLang = l => { S.lang = l; localStorage.setItem(KEY + "-lang", l); save(); render(); };
+const setCur  = c => { S.cur  = c; localStorage.setItem(KEY + "-cur", c);  save(); render(); };
+
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+const n = v => Math.round(+v || 0);
+const curRate = () => S.rate[S.cur] || 1;
+const f = v => {
+    const converted = (+v || 0) / curRate();
+    const rounded = S.cur === "UZS" ? Math.round(converted) : Math.round(converted * 100) / 100;
+    return String(rounded).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+};
+const sum = (a, k) => (a || []).reduce((s, x) => s + (+x[k] || 0), 0);
+const esc = s => String(s || "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const tr = k => (I18N[S.lang] && I18N[S.lang][k]) || I18N.uz[k] || k;
+const locTitle = loc => {
+    if (!loc) return tr("mainMk");
+    if (loc.id === "wh1" && (loc.name === "Asosiy Sklad" || loc.name === "Негизги Склад")) return tr("mainWh");
+    if (loc.id === "mk1" && (loc.name === "1-Doʻkon (Asosiy)" || loc.name === "1-Дүкөн (Негизги)")) return tr("mainMk");
+    return loc.name;
+};
+
+if (!S.users || S.users.length === 0) {
+    S.users = [
+        { id: "u0", name: "Boshliq", login: "boss", pw: "1234", role: "boss", loc: "all", tg: "", email: "", bio: true },
+        { id: "u1", name: "Menejer", login: "menejer", pw: "1234", role: "man", loc: "wh1", tg: "", email: "", bio: false },
+        { id: "u2", name: "Sotuvchi", login: "sotuvchi", pw: "1234", role: "sel", loc: "mk1", tg: "", email: "", bio: false },
+        { id: "u3", name: "Xaridor (Mijoz)", login: "xaridor", pw: "1234", role: "cust", loc: "mk1", tg: "", email: "", bio: true }
+    ];
+    save();
+}
+
+let USER = null, role = "boss", tab = "home", ERR = "", OK = "", activeLoc = "all", authMode = "login", selLotId = "";
+try { USER = S.users.find(u => u.id == localStorage.getItem(KEY + "-u")) || null; } catch(e) {}
+if (USER) {
+    role = USER.role;
+    if (role === "sel" && USER.loc && USER.loc !== "all") activeLoc = USER.loc;
+    if (USER.lang) S.lang = USER.lang;
+    if (USER.cur)  S.cur  = USER.cur;
+}
+
+const roleName = r => tr("role_" + r);
+
+const L = id => S.lots.find(l => l.id == id);
+const tot = l => l.boxes * l.per;
+const cost = l => l.buy + sum(l.exp || [], "amt");
+const unit = l => tot(l) > 0 ? cost(l) / tot(l) : 0;
+const sold = (l, locId) => sum(S.sales.filter(s => s.lot == l.id && (!locId || s.loc == locId)), "q");
+
+const inLoc = (l, locId) => {
+    const startWh = l.initWh || "wh1";
+    let q = (locId === startWh) ? tot(l) : 0;
+    S.moves.forEach(m => {
+        if (m.lot != l.id) return;
+        const fromId = m.from || "wh1";
+        const toId   = m.to || "mk1";
+        if (fromId === locId) q -= (+m.q || 0);
+        if (toId === locId)   q += (+m.q || 0);
+    });
+    q -= sold(l, locId);
+    return Math.max(0, q);
+};
+
+const inWh = (l, whId) => {
+    const whs = S.locs.filter(x => x.type === "wh");
+    if (whId && whId !== "all") return inLoc(l, whId);
+    return whs.reduce((acc, w) => acc + inLoc(l, w.id), 0);
+};
+
+const inMk = (l, mkId) => {
+    const mks = S.locs.filter(x => x.type === "mk");
+    if (mkId && mkId !== "all") {
+        const locObj = S.locs.find(x => x.id == mkId);
+        if (locObj && locObj.type === "wh") return 0;
+        return inLoc(l, mkId);
+    }
+    return mks.reduce((acc, m) => acc + inLoc(l, m.id), 0);
+};
+
+const getStars = l => {
+    const s = sold(l, null);
+    const t = Math.max(1, tot(l));
+    const ratio = s / t;
+    if (s === 0) return 0;
+    if (ratio >= 0.7 || s >= 50) return 5;
+    if (ratio >= 0.5 || s >= 30) return 4;
+    if (ratio >= 0.3 || s >= 15) return 3;
+    if (ratio >= 0.12 || s >= 5) return 2;
+    return 1;
+};
+
+const bx = (l, q) => Math.floor(q / l.per) + " " + tr("box") + " " + (q % l.per) + " " + tr("pcs");
+const tm = t => new Date(t).toLocaleDateString("ru-RU") + " " + new Date(t).toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"});
+
+const getTabs = () => {
+    const waitCnt = (S.ord || []).filter(o => o.status !== "sent").length;
+    const ordBadge = waitCnt ? ` (${waitCnt})` : "";
+    return ({
+        boss: [["home",tr("home")],["buy",tr("buy")],["trf",tr("trf")],["wh",tr("wh")],["mk",tr("mk")],["ord",tr("ord")+ordBadge],["cat",tr("cat")],["cash",tr("cash")],["debt",tr("debt")],["staff",tr("staff")],["sub",tr("sub")],["prof",tr("prof")]],
+        man:  [["trf",tr("trf")],["wh",tr("wh")],["mk",tr("mk")],["ord",tr("ord")+ordBadge],["cat",tr("cat")],["cash",tr("cash")],["debt",tr("debt")],["prof",tr("prof")]],
+        sel:  [["mk",tr("mk")],["ord",tr("ord")+ordBadge],["cat",tr("cat")],["cash",tr("cash")],["debt",tr("debt")],["prof",tr("prof")]],
+        cust: [["cat",tr("cat")],["prof",tr("prof")]]
+    }[role] || [["cat",tr("cat")],["prof",tr("prof")]]);
+};
+
+function pr(l, q, mode) {
+    if (mode === "box" || (l.pBox && q >= l.per && mode !== "ret" && mode !== "opt")) return { p: l.pBox ? Math.round(l.pBox / l.per) : l.pRet, t: tr("prBox") };
+    if (mode === "opt" || (l.pOpt && q >= (l.optMin || 5) && mode !== "ret")) return { p: l.pOpt, t: tr("prOpt") };
+    return { p: l.pRet, t: tr("prRet") };
+}
+
+const st = (a, v) => `<div class="c"><div class="mu">${a}</div><div class="big">${f(v)} <small>${S.cur}</small></div></div>`;
+const num = (id, lb, ph, valStr, onInp) => `<label>${lb}<input id="${id}" type="number" step="any" inputmode="decimal" ${ph?`placeholder="${ph}"`:""} ${valStr!==undefined?`value="${valStr}"`:""} ${onInp?`oninput="${onInp}"`:""}></label>`;
+
+function calcWallets() {
+    const locFilter = (role === "sel" && USER?.loc && USER.loc !== "all") ? USER.loc : (activeLoc !== "all" ? activeLoc : null);
+    const salesList = S.sales.filter(s => !locFilter || s.loc == locFilter || (!s.loc && locFilter === "mk1"));
+    let cashIn = 0, cardIn = 0, debtIn = 0;
+    salesList.forEach(s => {
+        if (s.pCash !== undefined || s.pCard !== undefined || s.pDebt !== undefined) {
+            cashIn += (+s.pCash || 0);
+            cardIn += (+s.pCard || 0);
+            debtIn += (+s.pDebt || 0);
+        } else cashIn += (+s.tot || 0);
+    });
+    (S.co || []).forEach(c => {
+        cashIn += (+c.paidCash || 0);
+        cardIn += (+c.paidCard || 0);
+    });
+    const expCash = sum((S.mexp || []).filter(e => e.w !== "card"), "amt");
+    const expCard = sum((S.mexp || []).filter(e => e.w === "card"), "amt");
+    const handCash = sum((S.hand || []).filter(h => h.w !== "card"), "amt");
+    const handCard = sum((S.hand || []).filter(h => h.w === "card"), "amt");
+    const totalCustDebt = (S.co || []).reduce((acc, c) => acc + Math.max(0, (+c.debt||0) - (+c.paidCash||0) - (+c.paidCard||0)), 0);
+    const totalSupDebt  = (S.sups || []).reduce((acc, sp) => acc + Math.max(0, +sp.debtUZS || 0), 0);
+
+    return {
+        rev: sum(salesList, "tot"),
+        cashBal: cashIn - expCash - handCash,
+        cardBal: cardIn - expCard - handCard,
+        debtBal: totalCustDebt,
+        supDebt: totalSupDebt,
+        handTot: handCash + handCard,
+        expTot: expCash + expCard
+    };
+}
+
+/* =========================================================
+   3. BARCHA SAHIFALAR (VIEWS)
+   ========================================================= */
+let tmpBuyImg = "";
+let posCart = []; // POS savdo uchun ko'p tovarli vaqtinchalik ro'yxat
+let buyCart = []; // Vaqtinchalik savatcha (obyekt tashqarisida)
+const V = {
+    home() {
+        const W = calcWallets();
+        const cg = S.sales.reduce((s, x) => { const l = L(x.lot); return s + (l ? x.q * unit(l) : 0); }, 0);
+        const w = S.lots.reduce((s, l) => s + inWh(l, activeLoc==="all"?null:activeLoc) * unit(l), 0);
+        const m = S.lots.reduce((s, l) => s + inMk(l, activeLoc==="all"?null:activeLoc) * unit(l), 0);
+        const discTot = sum(S.sales, "disc");
+
+        return `<div class="g3">
+            ${st(tr("stWh"), w)}
+            ${st(tr("stMk"), m)}
+            ${st(tr("stRev"), W.rev)}
+            ${st(tr("stProf"), W.rev - cg - W.expTot)}
+            ${st(tr("stCash"), W.cashBal)}
+            ${st(tr("stCard"), W.cardBal)}
+            ${st(tr("stDebt"), W.debtBal)}
+            ${st(tr("stSupDebt"), W.supDebt)}
+            ${st(tr("stExp"), W.expTot)}
+            ${st(tr("stHand"), W.handTot)}
+        </div>` +
+        (S.lots.length ? `<div class="c"><h3>${tr("statTitle")} <span class="badge">${tr("disc")}: ${f(discTot)} ${S.cur}</span></h3>
+            <div class="mu">${tr("lotsCnt")}: <b>${S.lots.length}</b> | ${tr("salesCnt")}: <b>${S.sales.length}</b></div>
+        </div>` : `<div class="c">${tr("startImp")}</div>`);
+    },
+
+    // SOTIB OLISH (Zavodga ketma-ket tovar qo'shish va qarzga yozish)
+
+
+    
+    buy() {
+
+        const sups = (S.sups || []).filter(x => x.type !== "cargo");
+        const whs = S.locs.filter(x => x.type === "wh");
+        const cartTot = buyCart.reduce((a, c) => a + c.totCur, 0);
+
+        return `<div class="g2">
+            <div class="c">
+                <h3>${tr("impNew")}</h3>
+                
+                <div class="row">
+                    <label>${tr("supName")}
+                        <select id="supSel" onchange="$('supNew').style.display=this.value==='new'?'block':'none'">
+                            ${sups.map(s=>`<option value="${s.id}">🏭 ${esc(s.name)}</option>`).join("")}
+                            <option value="new">➕ ${tr("newPartner")}</option>
+                        </select>
+                        <input id="supNew" placeholder="Matiz Zavod..." style="display:none;margin-top:6px">
+                    </label>
+                    <label>${tr("warehouse")}<select id="initWh">${whs.map(w=>`<option value="${w.id}">${esc(locTitle(w))}</option>`).join("")}</select></label>
+                </div>
+
+                <div class="row">
+                    <label style="flex:2">${tr("prodName")}<input id="nm" placeholder="Nike Air Zoom..."></label>
+                    <label style="flex:1">${tr("barcode")}<input id="bc" placeholder="8901..."></label>
+                </div>
+
+                <label>${tr("prodImg")}
+                    <input type="file" accept="image/*" onchange="uploadBuyImg(this)">
+                </label>
+
+                <div class="row">
+                    ${num("bxn",tr("boxCnt"),"","10","")}
+                    ${num("pc",tr("perBox"),"","12","")}
+                </div>
+
+                <div class="calc-box">
+                    <div class="row">
+                        <label>${tr("buyCur")}
+                            <select id="bCur">
+                                ${["USD","CNY","KGS","UZS","RUB","KZT","TJS"].map(c=>`<option value="${c}" ${c===S.cur?"selected":""}>${c}</option>`).join("")}
+                            </select>
+                        </label>
+                        ${num("bUnitP",tr("buyPriceUnit"),"","")}
+                    </div>
+                </div>
+
+                <button class="b b-tp" style="width:100%;margin-top:8px" onclick="addItemToBuyCart()">➕ Ro‘yxatga qo‘shish</button>
+
+                <!-- QO'SHILGAN TOVARLAR SAVATCHASI VA O'CHIRISH TUGMASI -->
+                <div style="margin:14px 0;max-height:220px;overflow-y:auto">
+                    ${buyCart.length ? `<table>
+                        <tr><th>Tovar</th><th>Karobka / Dona</th><th class="r">Summa</th><th></th></tr>
+                        ${buyCart.map((it, idx) => `<tr>
+                            <td><b>${esc(it.name)}</b><br><span class="mu">${it.boxes} karobka (${it.per} tadan)</span></td>
+                            <td>${it.boxes * it.per} dona</td>
+                            <td class="r"><b>${it.totCur}</b></td>
+                            <td class="r"><button class="x" onclick="buyCart.splice(${idx},1);render()">🗑️ O'chirish</button></td>
+                        </tr>`).join("")}
+                    </table>` : `<p class="mu" style="text-align:center;margin:10px 0">Hali tovarlar qo‘shilmadi. Yuqoridan ketma-ket qo‘shib chiqing!</p>`}
+                </div>
+
+                <div class="c" style="background:#0b1120;margin:10px 0;padding:12px">
+                    <div class="mu">Jami tovarlar summasi:</div>
+                    <div class="big" style="color:var(--tp)">${cartTot}</div>
+                </div>
+
+                <div class="row">
+                    ${num("mRet",tr("mrgRet"),"","25","")}
+                    ${num("mOpt",tr("mrgOpt"),"","15","")}
+                    ${num("mBox",tr("mrgBox"),"","10","")}
+                </div>
+                <div class="row">
+                    ${num("om",tr("optMin"),"","5")}
+                </div>
+
+                <button class="b b-ok" style="width:100%;margin-top:8px" onclick="saveWholeBuyBatch()">✅ Sotib olindi (Zavodga yozish)</button>
+            </div>
+
+            <!-- ZAVOD VA KARGOLAR QARZDORLIK DAFTARI -->
+            <div>
+                <div class="c">
+                    <h3>${tr("supTitle")}</h3>
+                    <div class="row">
+                        <label style="flex:2">${tr("newPartner")}<input id="newSpNm" placeholder="Matiz Zavod..."></label>
+                        <label style="flex:1">${tr("type")}
+                            <select id="newSpTp">
+                                <option value="sup">🏭 Zavod</option>
+                                <option value="cargo">🚚 Kargo</option>
+                            </select>
+                        </label>
+                        <button class="b" onclick="addPartner()">${tr("addBtn")}</button>
+                    </div>
+                    <div class="tw"><table>
+                        <tr><th>Nomi</th><th>${tr("remDebt")}</th><th>${tr("payBtn")} (${S.cur})</th></tr>
+                        ${(S.sups||[]).map((sp, idx) => `<tr>
+                            <td><b>${sp.type==='cargo'?'🚚':'🏭'} ${esc(sp.name)}</b></td>
+                            <td><b style="color:${sp.debtUZS>0?'var(--bad)':'var(--ok)'}">${f(sp.debtUZS||0)} ${S.cur}</b></td>
+                            <td>
+                                <div class="row" style="margin:0">
+                                    <input id="spd_${idx}" type="number" placeholder="${tr("amt")}" style="width:95px">
+                                    <button class="b b-sm" onclick="payPartnerDebt(${idx})">${tr("payBtn")}</button>
+                                </div>
+                            </td>
+                        </tr>`).join("")}
+                    </table></div>
+                </div>
+
+                ${S.lots.map(l => `<div class="c">
+                    <h3>
+                        <span>${l.img ? `<img src="${esc(l.img)}" style="width:32px;height:32px;border-radius:6px;vertical-align:middle;object-fit:cover;margin-right:6px">` : `📦 `}${esc(l.name)} ${l.bc?`<span class="badge">#${esc(l.bc)}</span>`:""}</span>
+                        <button class="x" onclick="delLot('${l.id}')">🗑️</button>
+                    </h3>
+                    <div class="mu">🏭 ${esc(l.supName||"-")} | 🚚 ${esc(l.cargoName||"-")} | ⚖️ ${l.kg||0} kg</div>
+                    <div class="mu">${l.boxes} ${tr("box")} × ${l.per} ${tr("pcs")} = <b>${tot(l)} ${tr("pcs")}</b> | ${tr("costBase")}: <b>${f(unit(l))} ${S.cur}</b></div>
+                </div>`).join("")}
+            </div>
+        </div>`;
+    },
+
+    // SAVATCHAGA QO'SHISH FUNksiyasi
+    addItemToBuyCart() {
+        const nm = $("nm")?.value.trim();
+        const bx = val("bxn"), pc = val("pc"), pr = val("bUnitP");
+        if (!nm || bx <= 0 || pc <= 0 || pr <= 0) { alert("Tovar nomi, karobka va narxini to'liq kiriting!"); return; }
+
+        const totPcs = bx * pc;
+        const totCur = totPcs * pr;
+
+        buyCart.push({
+            name: nm, bc: $("bc")?.value.trim() || "", img: tmpBuyImg || "",
+            boxes: bx, per: pc, buyUnitCur: pr, totCur
+        });
+
+        tmpBuyImg = "";
+        if ($("nm")) $("nm").value = "";
+        if ($("bc")) $("bc").value = "";
+        if ($("bxn")) $("bxn").value = "";
+        if ($("pc")) $("pc").value = "";
+        if ($("bUnitP")) $("bUnitP").value = "";
+        render();
+    },
+
+    // BARCHA TOVARLARNI ZAVOD QARZIGA VA SAQLASHGA YOZISH
+    saveWholeBuyBatch() {
+        if (!buyCart.length) { alert("Savatchada tovarlar yo'q!"); return; }
+
+        const cur = $("bCur").value;
+        const rt = S.rate[cur] || 1;
+
+        let supObj = null;
+        if ($("supSel").value === "new") {
+            const sName = $("supNew").value.trim() || "Zavod";
+            supObj = { id: uid(), name: sName, type: "sup", debtUZS: 0 };
+            S.sups.push(supObj);
+        } else supObj = S.sups.find(x => x.id == $("supSel").value);
+
+        let totalSupUZS = 0;
+        buyCart.forEach(it => { totalSupUZS += it.totCur * rt; });
+
+        if (supObj && totalSupUZS > 0) supObj.debtUZS = (+supObj.debtUZS || 0) + totalSupUZS;
+
+        const initWh = $("initWh")?.value || "wh1";
+        const mRet = val("mRet") || 25;
+        const mOpt = val("mOpt") || 15;
+        const mBox = val("mBox") || 10;
+        const om = val("om") || 5;
+
+        buyCart.forEach(it => {
+            const unitCostUZS = (it.totCur * rt) / (it.boxes * it.per);
+            const pRet = Math.round(unitCostUZS * (1 + mRet / 100));
+            const pOpt = Math.round(unitCostUZS * (1 + mOpt / 100));
+            const pBox = Math.round(unitCostUZS * it.per * (1 + mBox / 100));
+
+            S.lots.push({
+                id: uid(), name: it.name, bc: it.bc, img: it.img,
+                supName: supObj ? supObj.name : "", cargoName: "",
+                kg: 0, initWh,
+                boxes: it.boxes, per: it.per, buy: it.totCur * rt,
+                exp: [],
+                pRet, pOpt, optMin: om, pBox, promo: 0
+            });
+        });
+
+        buyCart = [];
+        OK = "✅ Tovar muvaffaqiyatli sotib olindi va zavod qarziga yozildi!";
+        save(); render();
+    },
+    // O'TKAZMA (SKLAD ⇄ SKLAD / DO'KON)
+    trf() {
+        return `<div class="c"><h3>${tr("mvTitle")}</h3>
+        ${S.lots.length ? `
+            <div class="row">
+                <label>${tr("fromLoc")}
+                    <select id="mvFrom">
+                        ${S.locs.map(loc=>`<option value="${loc.id}">${loc.type==='wh'?'🏭':'🏪'} ${esc(locTitle(loc))}</option>`).join("")}
+                    </select>
+                </label>
+                <label>${tr("toLoc")}
+                    <select id="mvTo">
+                        ${S.locs.map((loc,i)=>`<option value="${loc.id}" ${i===1?'selected':''}>${loc.type==='wh'?'🏭':'🏪'} ${esc(locTitle(loc))}</option>`).join("")}
+                    </select>
+                </label>
+            </div>
+            <label>${tr("selProd")}
+                <select id="tl">
+                    ${S.lots.map(l=>`<option value="${l.id}">${esc(l.name)} (${tr("inWhCol")}: ${bx(l,inWh(l))} | ${tr("inMkCol")}: ${bx(l,inMk(l))})</option>`).join("")}
+                </select>
+            </label>
+            <div class="row">${num("tb",tr("box"))}${num("tp",tr("pcs"))}</div>
+            <button class="b" onclick="moveBetweenLocs()">${tr("confirmMv")}</button>
+        ` : `<p class="mu">${tr("noProd")}</p>`}
+        </div>` +
+
+        (S.moves.length ? `<div class="c"><h3>${tr("mvHist")}</h3>
+        <div class="tw"><table><tr><th>${tr("prodName")}</th><th>${tr("fromLoc")} ➔ ${tr("toLoc")}</th><th>${tr("pcs")}</th><th class="r">${tr("time")}</th></tr>
+        ${S.moves.slice(-12).reverse().map(m => {
+            const l = L(m.lot);
+            const fn = locTitle(S.locs.find(x=>x.id==m.from));
+            const tn = locTitle(S.locs.find(x=>x.id==m.to));
+            return `<tr><td><b>${esc(l?l.name:"-")}</b></td><td><span class="badge">${esc(fn)} ➔ ${esc(tn)}</span></td><td>${l?bx(l,m.q):m.q}</td><td class="r mu">${tm(m.t)}</td></tr>`;
+        }).join("")}</table></div></div>` : "");
+    },
+
+    // SKLAD, REYTING (⭐) VA AKSIYA
+    wh() {
+        return `<div class="c"><h3>${tr("whTitle")}</h3>` + 
+        (S.lots.length ? `<div class="tw"><table>
+            <tr>
+                <th>${tr("prodName")}</th>
+                <th>${tr("inWhCol")}</th>
+                <th>${tr("inMkCol")}</th>
+                <th>${tr("soldCol")}</th>
+                <th>${tr("ratingCol")}</th>
+                <th class="r">${tr("promoCol")}</th>
+            </tr>
+            ${S.lots.map(l => {
+                const stars = getStars(l);
+                const starHtml = stars > 0 ? "⭐".repeat(stars) : `<span class="badge badge-bad">☆ 0 (Sust)</span>`;
+                return `<tr>
+                    <td><b>${esc(l.name)}</b> ${l.promo?`<span class="badge badge-tp">${tr("promoActive")} -${l.promo}%</span>`:""}</td>
+                    <td>${bx(l,inWh(l, activeLoc==="all"?null:activeLoc))}</td>
+                    <td>${bx(l,inMk(l, activeLoc==="all"?null:activeLoc))}</td>
+                    <td><b>${sold(l, null)} ${tr("pcs")}</b></td>
+                    <td>${starHtml}</td>
+                    <td class="r">
+                        <button class="b b-sm ${stars===0?'b-tp':'b-out'}" onclick="setPromoLot('${l.id}')">${tr("makePromo")}</button>
+                    </td>
+                </tr>`;
+            }).join("")}
+        </table></div>` : `<p class="mu">${tr("noProd")}</p>`) + `</div>`;
+    },
+
+    // SOTUV TERMINALI (Ko'p tovarli chek / korzinka + Mijoz tanlash strelkasi)
+    mk() {
+        const curShop = (role === "sel" && USER?.loc && USER.loc !== "all") ? USER.loc : (activeLoc !== "all" ? activeLoc : null);
+        const av = S.lots.filter(l => inMk(l, curShop) > 0);
+        if (!av.length) return `<div class="c"><h3>${tr("posTerm")}</h3><p class="mu">${tr("noProd")}</p></div>`;
+        if (!selLotId || !av.some(x => x.id == selLotId)) selLotId = av[0].id;
+
+        const cartSum = posCart.reduce((a, c) => a + c.tot, 0);
+
+        return `<div class="pos-wrap">
+            <div class="c">
+                <h3><span>${tr("posProds")}</span><span class="badge">${av.length}</span></h3>
+                <div class="row"><input id="posQ" placeholder="${tr("searchPh")}" oninput="filterPos()"></div>
+                <div class="pg" id="posGrid">
+                    ${av.map(l => {
+                        const rem = inMk(l, curShop);
+                        const stars = getStars(l);
+                        return `<div class="pos-card ${l.id==selLotId?'sel':''}" data-nm="${esc(l.name.toLowerCase())}" data-bc="${esc((l.bc||'').toLowerCase())}" onclick="pickPos('${l.id}')">
+                            <div>
+                                ${l.img ? `<img class="pi" src="${esc(l.img)}">` : `<div class="pi">👟</div>`}
+                                <div style="font-weight:800;font-size:.92rem">${esc(l.name)} ${l.promo?`🔥`:""}</div>
+                                <div style="font-size:.75rem">${stars>0?"⭐".repeat(stars):""}</div>
+                                <div class="mu" style="font-size:.76rem">${bx(l, rem)}</div>
+                            </div>
+                            <div style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--ln);font-weight:800;color:var(--ac)">
+                                ${f(l.pRet)} <small>${S.cur}</small>
+                            </div>
+                        </div>`;
+                    }).join("")}
+                </div>
+            </div>
+
+            <div class="c">
+                <h3>${tr("posTerm")}</h3>
+                <label>${tr("selProd")}
+                    <select id="sl" onchange="selLotId=this.value;upd()">
+                        ${av.map(l=>`<option value="${l.id}" ${l.id==selLotId?"selected":""}>${esc(l.name)} (${bx(l,inMk(l,curShop))})</option>`).join("")}
+                    </select>
+                </label>
+
+                <label>${tr("saleMode")}</label>
+                <div class="seg" id="sModeSeg">
+                    <button type="button" class="on" onclick="setSMode('auto',this)">${tr("auto")}</button>
+                    <button type="button" onclick="setSMode('ret',this)">${tr("prRet")}</button>
+                    <button type="button" onclick="setSMode('opt',this)">${tr("prOpt")}</button>
+                    <button type="button" onclick="setSMode('box',this)">${tr("prBox")}</button>
+                </div>
+
+                <div class="row">
+                    <label>${tr("box")}<input id="sb" type="number" inputmode="numeric" placeholder="0" oninput="upd()"></label>
+                    <label>${tr("pcs")}<input id="sp" type="number" inputmode="numeric" value="1" oninput="upd()"></label>
+                </div>
+
+                <div class="row">
+                    <label>${tr("unitPr")} <span id="tier" class="badge"></span><input id="spr" type="number" inputmode="numeric" oninput="tot2()"></label>
+                    <label>${tr("disc")}<input id="sdisc" type="number" inputmode="numeric" placeholder="0" oninput="tot2()"></label>
+                </div>
+
+                <button class="b b-out" style="width:100%;margin-top:6px" onclick="posAddToCart()">${tr("addCartBtn")}</button>
+
+                <!-- KORZINKAGA YIG'ILGAN TOVARLAR JADVALI -->
+                <div style="margin:12px 0;max-height:160px;overflow-y:auto">
+                    ${posCart.length ? `<table>
+                        <tr><th>Tovar</th><th>Soni</th><th class="r">Jami</th><th></th></tr>
+                        ${posCart.map((it, idx) => `<tr>
+                            <td><b>${esc(it.name)}</b></td>
+                            <td>${it.q} dona</td>
+                            <td class="r"><b>${f(it.tot)}</b></td>
+                            <td class="r"><button class="x" onclick="posCart.splice(${idx},1);render()">×</button></td>
+                        </tr>`).join("")}
+                    </table>` : `<p class="mu" style="text-align:center;margin:8px 0">Chek bo‘sh (tovar qo‘shilmagan)</p>`}
+                </div>
+
+                <div class="c" style="background:var(--bg);margin:8px 0;padding:10px">
+                    <div class="mu">${tr("finalSum")}:</div>
+                    <div class="big" id="posCartTot" style="color:var(--ac)">${f(cartSum)} <small>${S.cur}</small></div>
+                </div>
+
+                <label>${tr("payMethod")}</label>
+                <div class="seg" id="payTypeSeg">
+                    <button type="button" class="on" onclick="setPayType('cash',this)">${tr("cashPay")}</button>
+                    <button type="button" onclick="setPayType('card',this)">${tr("cardPay")}</button>
+                    <button type="button" onclick="setPayType('mix',this)">${tr("mixPay")}</button>
+                    <button type="button" onclick="setPayType('debt',this)">${tr("debtPay")}</button>
+                </div>
+
+                <div id="mixBox" style="display:none" class="row">
+                    <label>${tr("paidCashLbl")}<input id="pCashIn" type="number" inputmode="numeric" placeholder="0"></label>
+                    <label>${tr("paidCardLbl")}<input id="pCardIn" type="number" inputmode="numeric" placeholder="0"></label>
+                </div>
+
+                <div id="debtBox" style="display:none">
+                    <label>${tr("custSelect")}
+                        <select id="selCustId">
+                            ${(S.co||[]).map(c=>`<option value="${c.id}">${esc(c.name)} (${esc(c.phone||"")})</option>`).join("")}
+                        </select>
+                    </label>
+                </div>
+
+                <button class="b b-ok" onclick="sellMulti()" style="width:100%;margin-top:10px;padding:12px">${tr("finishSale")}</button>
+            </div>
+        </div>`;
+    },
+
+    // XARIDOR KATALOGI
+    cat() {
+        const av = S.lots.filter(l => inMk(l, null) > 0);
+        const cartTot = (S.cart || []).reduce((a, c) => {
+            const l = L(c.lot);
+            return a + (l ? c.q * pr(l, c.q, "auto").p : 0);
+        }, 0);
+
+        return `<div class="pos-wrap">
+            <div class="c">
+                <h3><span>${tr("catTitle")}</span><span class="badge">${av.length}</span></h3>
+                ${av.length ? `<div class="pg">
+                    ${av.map(l => {
+                        const rem = inMk(l, null);
+                        const stars = getStars(l);
+                        return `<div class="pos-card">
+                            <div>
+                                ${l.img ? `<img class="pi" src="${esc(l.img)}">` : `<div class="pi">👟</div>`}
+                                <div style="font-weight:800;font-size:.95rem">${esc(l.name)} ${l.promo?`<span class="badge badge-tp">-${l.promo}%</span>`:""}</div>
+                                <div style="font-size:.75rem">${stars>0?"⭐".repeat(stars):""}</div>
+                                <div class="mu" style="font-size:.76rem">${tr("inMkCol")}: <b>${bx(l, rem)}</b></div>
+                                <div class="mu" style="font-size:.76rem">${tr("prRet")}: <b>${f(l.pRet)}</b> | ${tr("prOpt")} (${l.optMin||5}+): <b>${f(l.pOpt||l.pRet)}</b></div>
+                            </div>
+                            <div style="margin-top:8px">
+                                <div class="row" style="margin-bottom:6px">
+                                    <input id="cq_${l.id}" type="number" value="1" min="1" max="${rem}" style="padding:6px">
+                                </div>
+                                <button class="b b-sm" style="width:100%" onclick="addCart('${l.id}')">${tr("addToCart")}</button>
+                            </div>
+                        </div>`;
+                    }).join("")}
+                </div>` : `<p class="mu">${tr("noProd")}</p>`}
+            </div>
+
+            <div class="c">
+                <h3>${tr("cartTitle")}</h3>
+                ${(S.cart && S.cart.length) ? `
+                    <div class="tw"><table>
+                        <tr><th>${tr("prodName")}</th><th>${tr("pcs")}</th><th class="r">${tr("amt")}</th><th></th></tr>
+                        ${S.cart.map((c, idx) => {
+                            const l = L(c.lot);
+                            if (!l) return "";
+                            const unitP = pr(l, c.q, "auto").p;
+                            return `<tr>
+                                <td><b>${esc(l.name)}</b></td>
+                                <td>${c.q} ${tr("pcs")}</td>
+                                <td class="r">${f(c.q * unitP)} ${S.cur}</td>
+                                <td class="r"><button class="x" onclick="S.cart.splice(${idx},1);save();render()">×</button></td>
+                            </tr>`;
+                        }).join("")}
+                    </table></div>
+                    <div class="c" style="background:var(--bg);padding:10px;margin:8px 0">
+                        <div class="mu">${tr("finalSum")}:</div>
+                        <div class="big" style="color:var(--ac)">${f(cartTot)} <small>${S.cur}</small></div>
+                    </div>
+                    <label>${tr("note")} / ${tr("phone")}<input id="ordNote" value="${esc(USER?.login||'')}" placeholder="+996..."></label>
+                    <button class="b b-ok" style="width:100%;margin-top:8px" onclick="submitOrder()">${tr("sendOrd")}</button>
+                ` : `<p class="mu">${tr("emptyCart")}</p>`}
+
+                <h3 style="margin-top:18px">${tr("myOrds")}</h3>
+                ${(S.ord || []).length ? `<div class="tw"><table>
+                    <tr><th>ID</th><th>${tr("amt")}</th><th>Status</th><th class="r">${tr("time")}</th></tr>
+                    ${S.ord.slice().reverse().map(o => `<tr>
+                        <td><b>#${o.id.slice(-4)}</b><br><span class="mu">${esc(o.custName)}</span></td>
+                        <td><b>${f(o.tot)} ${S.cur}</b></td>
+                        <td><span class="badge ${o.status==='sent'?'badge-ok':(o.status==='paid'?'badge-tp':'')}">${o.status==='sent'?tr("ordSent"):(o.status==='paid'?tr("ordPaid"):tr("ordWait"))}</span></td>
+                        <td class="r mu">${tm(o.t)}</td>
+                    </tr>`).join("")}
+                </table></div>` : `<p class="mu">${tr("noOrds")}</p>`}
+            </div>
+        </div>`;
+    },
+
+    // BUYURTMALARNI QABUL QILISH
+    ord() {
+        const list = (S.ord || []).slice().reverse();
+        return `<div class="c"><h3>${tr("ordTitle")}</h3>
+        ${list.length ? list.map(o => {
+            const itemsTxt = (o.items || []).map(it => {
+                const l = L(it.lot);
+                return `${esc(l?l.name:"Tovar")} (${it.q} ${tr("pcs")})`;
+            }).join(", ");
+            const isConfirmed = o.status === "paid" || o.status === "sent";
+            const isSent = o.status === "sent";
+
+            return `<div class="c" style="background:#0b1120;margin-bottom:12px">
+                <h3>
+                    <span>📦 #${o.id.slice(-4)} — <b>${esc(o.custName)}</b> (${esc(o.phone||"")})</span>
+                    <span class="badge ${isSent?'badge-ok':(isConfirmed?'badge-tp':'')}">${isSent?tr("ordSent"):(isConfirmed?tr("ordPaid"):tr("ordWait"))}</span>
+                </h3>
+                <div class="mu" style="margin-bottom:8px">${itemsTxt} | <b>${tr("finalSum")}: ${f(o.tot)} ${S.cur}</b></div>
+                ${!isSent ? `
+                    <div class="row">
+                        <label>${tr("paidCashLbl")}<input id="oc_${o.id}" type="number" value="${o.pCash!==undefined?o.pCash:o.tot}" oninput="calcOrdRem('${o.id}',${o.tot})"></label>
+                        <label>${tr("paidCardLbl")}<input id="ok_${o.id}" type="number" value="${o.pCard||0}" oninput="calcOrdRem('${o.id}',${o.tot})"></label>
+                        <label>${tr("remDebtLbl")}<input id="od_${o.id}" type="number" readonly value="${o.pDebt||0}"></label>
+                    </div>
+                    <div class="row" style="margin-top:8px">
+                        <button class="b b-tp" onclick="confirmOrdPay('${o.id}')">${tr("confirmPay")}</button>
+                        <button class="b b-ok" ${!isConfirmed?'disabled':''} onclick="shipOrder('${o.id}')">${tr("sendProdBtn")}</button>
+                    </div>
+                ` : `<div class="mu">💵 ${tr("paidCashLbl")}: <b>${f(o.pCash)}</b> | 💳 ${tr("paidCardLbl")}: <b>${f(o.pCard)}</b> | 📒 ${tr("remDebtLbl")}: <b>${f(o.pDebt)}</b></div>`}
+            </div>`;
+        }).join("") : `<p class="mu">${tr("noOrds")}</p>`}
+        </div>`;
+    },
+
+    // KASSA
+    cash() {
+        const W = calcWallets();
+        return `<div class="g3">
+            ${st(tr("stRev"), W.rev)}
+            ${st(tr("stCash"), W.cashBal)}
+            ${st(tr("stCard"), W.cardBal)}
+        </div>
+        <div class="g2">
+            <div class="c">
+                <h3>${tr("handTitle")}</h3>
+                <div class="row">
+                    ${num("hm",tr("amt"))}
+                    <label>${tr("fromWallet")}
+                        <select id="hw">
+                            <option value="cash">${tr("cashPay")}</option>
+                            <option value="card">${tr("cardPay")}</option>
+                        </select>
+                    </label>
+                </div>
+                <label>${tr("note")}<input id="hnote" placeholder="MBank..."></label>
+                <button class="b" onclick="handOver()">${tr("handBtn")}</button>
+                <div class="tw" style="margin-top:10px">
+                    ${S.hand.length ? `<table><tr><th>${tr("amt")}</th><th>${tr("payMethod")}</th><th>${tr("note")}</th><th class="r">${tr("time")}</th></tr>
+                    ${S.hand.slice(-6).reverse().map(x=>`<tr><td><b>${f(x.amt)} ${S.cur}</b></td><td><span class="badge">${x.w==="card"?tr("cardPay"):tr("cashPay")}</span></td><td class="mu">${esc(x.note||"-")}</td><td class="r mu">${tm(x.t)}</td></tr>`).join("")}</table>` : ""}
+                </div>
+            </div>
+
+            <div class="c">
+                <h3>${tr("mktExpTitle")}</h3>
+                <div class="row">
+                    <label>${tr("reason")}<input id="mxLb" placeholder="Tushlik, ijara..."></label>
+                    ${num("mxAm",tr("amt"))}
+                </div>
+                <div class="row">
+                    <label>${tr("fromWallet")}
+                        <select id="mxW">
+                            <option value="cash">${tr("cashPay")}</option>
+                            <option value="card">${tr("cardPay")}</option>
+                        </select>
+                    </label>
+                    <button class="b b-bad" onclick="addMktExp()">${tr("expBtn")}</button>
+                </div>
+                <div class="tw" style="margin-top:10px">
+                    ${(S.mexp||[]).length ? `<table><tr><th>${tr("reason")}</th><th>${tr("amt")}</th><th>${tr("payMethod")}</th><th class="r">${tr("time")}</th></tr>
+                    ${S.mexp.slice(-6).reverse().map(x=>`<tr><td>${esc(x.label)}</td><td style="color:var(--bad)">-${f(x.amt)} ${S.cur}</td><td><span class="badge">${x.w==="card"?tr("cardPay"):tr("cashPay")}</span></td><td class="r mu">${tm(x.t)}</td></tr>`).join("")}</table>` : ""}
+                </div>
+            </div>
+        </div>
+
+        <div class="c">
+            <h3>${tr("lastSales")}</h3>
+            ${S.sales.length ? `<div class="tw"><table><tr><th>${tr("prodName")}</th><th>${tr("pcs")}</th><th>${tr("amt")}</th><th>${tr("payMethod")}</th><th class="r">${tr("time")}</th></tr>
+            ${S.sales.slice(-10).reverse().map(s => {
+                const l = L(s.lot);
+                const pInfo = s.pDebt > 0 ? tr("debtPay") : (s.pCard > 0 && s.pCash > 0 ? tr("mixPay") : (s.pCard > 0 ? tr("cardPay") : tr("cashPay")));
+                return `<tr><td><b>${esc(l?l.name:"Tovar")}</b></td><td>${s.q} ${tr("pcs")}</td><td><b>${f(s.tot)} ${S.cur}</b></td><td><span class="badge">${pInfo}</span></td><td class="r mu">${tm(s.t)} ${role==="boss"?`<button class="x" onclick="delSale('${s.id}')">×</button>`:""}</td></tr>`;
+            }).join("")}</table></div>` : `<p class="mu">${tr("noProd")}</p>`}
+        </div>`;
+    },
+
+    // NASIYA VA VOZVRAT (Mijoz tanlab vozvrat qilish, kassa yoki nasiyadan chegirish)
+    debt() {
+        return `<div class="g2">
+            <div class="c">
+                <h3>${tr("addCustTitle")}</h3>
+                <div class="row">
+                    <label>${tr("fullName")}<input id="ncNm" placeholder="Ali Xaridor"></label>
+                    <label>${tr("phone")}<input id="ncPh" placeholder="+996..."></label>
+                </div>
+                <div class="row">
+                    <label>${tr("pinCode")}<input id="ncPw" value="1234"></label>
+                    <label>${tr("tgUser")}<input id="ncTg" placeholder="@xaridor"></label>
+                </div>
+                <button class="b" onclick="registerCustomerInside()">${tr("addBtn")}</button>
+            </div>
+
+            <div class="c">
+                <h3>${tr("retTitle")}</h3>
+                ${S.sales.length ? `
+                    <label>Kimdan / Qaysi xaridor?
+                        <select id="retCust">
+                            <option value="">-- Dona xaridor (Nomsiz) --</option>
+                            ${(S.co||[]).map(c=>`<option value="${c.id}">${esc(c.name)} (${esc(c.phone||"")})</option>`).join("")}
+                        </select>
+                    </label>
+                    <label>${tr("lastSales")}<select id="retSale">${S.sales.slice(-20).reverse().map(s=>{const l=L(s.lot);return `<option value="${s.id}">${esc(l?l.name:"Tovar")} — ${s.q} ${tr("pcs")} (${f(s.tot)} ${S.cur})</option>`;}).join("")}</select></label>
+                    <div class="row">
+                        ${num("retQ",tr("retQty"),"1")}
+                        <label>Qaytariladigan pul hamyoni
+                            <select id="retWallet">
+                                <option value="cash">💵 Naqd kassadan qaytarish</option>
+                                <option value="card">💳 Kartadan qaytarish</option>
+                                <option value="debt">📒 Nasiya qarzidan ayirish</option>
+                            </select>
+                        </label>
+                    </div>
+                    <button class="b b-bad" onclick="makeReturn()">${tr("retBtn")}</button>
+                ` : `<p class="mu">${tr("noProd")}</p>`}
+            </div>
+        </div>
+
+        <div class="c">
+            <h3>${tr("debtList")}</h3>
+            ${(S.co||[]).length ? `<div class="tw"><table><tr><th>${tr("fullName")}</th><th>${tr("remDebt")}</th><th>${tr("payMethod")}</th></tr>
+            ${S.co.map((c,i) => {
+                const rem = Math.max(0, (+c.debt || 0) - (+c.paidCash || 0) - (+c.paidCard || 0));
+                return `<tr>
+                    <td><b>${esc(c.name)}</b><br><span class="mu">${esc(c.phone||"")}</span></td>
+                    <td><b style="color:${rem>0?'var(--bad)':'var(--ok)'}">${f(rem)} ${S.cur}</b></td>
+                    <td>${rem > 0 ? `<div class="row" style="margin:0"><input id="dp${i}" type="number" placeholder="${tr("amt")}" style="width:105px"><select id="dw${i}" style="width:95px"><option value="cash">${tr("cashPay")}</option><option value="card">${tr("cardPay")}</option></select><button class="b b-sm" onclick="payDebt(${i})">${tr("payBtn")}</button></div>` : `<span class="badge badge-ok">${tr("closed")}</span>`}</td>
+                </tr>`;
+            }).join("")}</table></div>` : `<p class="mu">${tr("noProd")}</p>`}
+        </div>`;
+    },
+
+    staff() {
+        return `<div class="g2">
+            <div class="c">
+                <h3>${tr("myLocs")}</h3>
+                <div class="row">
+                    <label style="flex:2">${tr("locName")}<input id="locNm" placeholder="2-Sklad..."></label>
+                    <label style="flex:1">${tr("type")}<select id="locTp"><option value="mk">${tr("shop")}</option><option value="wh">${tr("warehouse")}</option></select></label>
+                    <button class="b" onclick="addLoc()">${tr("addBtn")}</button>
+                </div>
+                <div class="tw"><table><tr><th>${tr("locName")}</th><th>${tr("type")}</th></tr>
+                ${S.locs.map(l=>`<tr><td><b>${esc(locTitle(l))}</b></td><td><span class="badge">${l.type==="wh"?tr("warehouse"):tr("shop")}</span></td></tr>`).join("")}
+                </table></div>
+            </div>
+
+            <div class="c">
+                <h3>${tr("addStaffTitle")}</h3>
+                <div class="row">
+                    <label>${tr("fullName")}<input id="uNm" placeholder="Ali Sotuvchi"></label>
+                    <label>${tr("phone")}<input id="uLg" placeholder="+996..."></label>
+                </div>
+                <div class="row">
+                    <label>${tr("pinCode")}<input id="uPw" value="1234"></label>
+                    <label>${tr("type")}<select id="uRl"><option value="sel">${tr("role_sel")}</option><option value="man">${tr("role_man")}</option><option value="boss">${tr("role_boss")}</option></select></label>
+                </div>
+                <button class="b" onclick="addStaff()">${tr("addBtn")}</button>
+            </div>
+        </div>
+
+        <div class="c">
+            <h3>${tr("staffList")}</h3>
+            <div class="tw"><table><tr><th>${tr("fullName")}</th><th>Login / PIN</th><th>${tr("type")}</th><th>${tr("myLocs")}</th></tr>
+            ${S.users.filter(u=>u.role!=="cust").map(u=>`<tr>
+                <td><b>${esc(u.name)}</b></td>
+                <td><code>${esc(u.login)}</code> / <code>${esc(u.pw)}</code></td>
+                <td><span class="badge">${roleName(u.role)}</span></td>
+                <td>
+                    <select onchange="chgUserLoc('${u.id}',this.value)" style="padding:4px;font-size:.82rem;width:auto">
+                        <option value="all" ${u.loc==="all"?"selected":""}>${tr("allLocs")}</option>
+                        ${S.locs.map(l=>`<option value="${l.id}" ${u.loc==l.id?"selected":""}>📍 ${esc(locTitle(l))}</option>`).join("")}
+                    </select>
+                </td>
+            </tr>`).join("")}</table></div>
+        </div>`;
+    },
+
+    sub() {
+        const days = Math.max(0, Math.ceil((S.sub.until - Date.now()) / 864e5));
+        const refUrl = `https://bozorcrm.app/?ref=${S.brand.shopId}`;
+        return `<div class="g3">
+            <div class="c"><div class="mu">${tr("subPlan")}</div><div class="big">💎 ${esc(S.sub.plan)}</div></div>
+            <div class="c"><div class="mu">${tr("remDays")}</div><div class="big" style="color:var(--ac)">${days} <small>${tr("days")}</small></div></div>
+            <div class="c"><div class="mu">${tr("bonusDays")}</div><div class="big" style="color:var(--tp)">+${S.sub.bonusDays||0} <small>${tr("days")}</small></div></div>
+        </div>
+        <div class="g2">
+            <div class="c">
+                <h3>${tr("extSub")}</h3>
+                <select id="subPl">
+                    <option value="30">📅 1 Oy — $10</option>
+                    <option value="180">📅 6 Oy — $50</option>
+                    <option value="365">🔥 1 Yil — $90</option>
+                </select>
+                <button class="b" style="width:100%;margin-top:10px" onclick="paySub('MBank / Click')">📲 MBank / Click orqali toʻlash</button>
+            </div>
+            <div class="c">
+                <h3>${tr("refTitle")}</h3>
+                <div class="row">
+                    <label>ID<input readonly value="${esc(S.brand.shopId)}" style="font-weight:800"></label>
+                    <button class="b b-out" onclick="navigator.clipboard?.writeText('${esc(S.brand.shopId)}');alert('OK!')">${tr("copy")}</button>
+                    <button class="b" onclick="shareRef('${refUrl}')">${tr("share")}</button>
+                </div>
+            </div>
+        </div>`;
+    },
+
+    prof() {
+        return `<div class="g2">
+            <div class="c">
+                <h3>${tr("myProf")}</h3>
+                <div class="row">
+                    <label>${tr("fullName")}<input id="pfNm" value="${esc(USER?.name||'')}"></label>
+                    <label>${tr("phone")}<input id="pfLg" value="${esc(USER?.login||'')}"></label>
+                </div>
+                <div class="row">
+                    <label>${tr("pinCode")}<input id="pfPw" type="password" value="${esc(USER?.pw||'1234')}"></label>
+                    <label>${tr("tgUser")}<input id="pfTg" value="${esc(USER?.tg||'')}" placeholder="@username"></label>
+                </div>
+                <button class="b b-ok" onclick="saveMyProfile()">${tr("saveProf")}</button>
+            </div>
+
+            ${role === "boss" ? `<div class="c">
+                <h3>${tr("brandSet")}</h3>
+                <label>${tr("locName")}<input id="brNm" value="${esc(S.brand.name)}"></label>
+                <button class="b" onclick="saveBrand()">${tr("saveBtn")}</button>
+
+                <h3 style="margin-top:16px">${tr("curSet")}</h3>
+                <div class="row">
+                    ${num("rtKGS","1 KGS", "", S.rate.KGS)}
+                    ${num("rtUSD","1 USD", "", S.rate.USD)}
+                    ${num("rtCNY","1 CNY", "", S.rate.CNY)}
+                    ${num("rtTJS","1 TJS", "", S.rate.TJS)}
+                </div>
+                <button class="b" onclick="saveRates()">${tr("saveBtn")}</button>
+            </div>` : ""}
+        </div>
+
+        ${role === "boss" ? `<div class="c">
+            <div class="row">
+                <button class="b b-out" onclick="loadDemoLots()">${tr("demoBtn")}</button>
+                <button class="b b-bad" onclick="delAllAccount()">${tr("delAcc")}</button>
+            </div>
+        </div>` : ""}`;
+    }
+};
+
+/* =========================================================
+   4. RENDER VA AUTH
+   ========================================================= */
+const langSelectHtml = () => `<select onchange="setLang(this.value)">
+    <option value="uz" ${S.lang==="uz"?"selected":""}>🇺🇿 Oʻzbek</option>
+    <option value="kg" ${S.lang==="kg"?"selected":""}>🇰🇬 Кыргызча</option>
+    <option value="ru" ${S.lang==="ru"?"selected":""}>🇷🇺 Русский</option>
+    <option value="en" ${S.lang==="en"?"selected":""}>🇺🇸 English</option>
+    <option value="zh" ${S.lang==="zh"?"selected":""}>🇨🇳 中文</option>
+    <option value="kz" ${S.lang==="kz"?"selected":""}>🇰🇿 Қазақша</option>
+    <option value="tj" ${S.lang==="tj"?"selected":""}>🇹🇯 Тоҷикӣ</option>
+</select>`;
+
+const curSelectHtml = () => `<select onchange="setCur(this.value)">
+    ${["UZS","KGS","USD","CNY","RUB","KZT","TJS"].map(c=>`<option value="${c}" ${S.cur===c?"selected":""}>${c}</option>`).join("")}
+</select>`;
+
+function render() {
+    if (!USER) { renderLogin(); return; }
+    const tabs = getTabs();
+    if (!tabs.some(t => t[0] == tab)) tab = tabs[0][0];
+
+    const logoHtml = S.brand.logo
+        ? `<img src="${esc(S.brand.logo)}" class="brand-logo">`
+        : `<div class="brand-logo">${esc((S.brand.name||"B").charAt(0).toUpperCase())}</div>`;
+
+    $("app").innerHTML = `
+        <div class="wrap">
+            <header>
+                <div class="brand-wrap">
+                    ${logoHtml}
+                    <div>
+                        <h1>${esc(S.brand.name)}</h1>
+                        <div class="mu" style="font-size:.78rem">
+                            <span class="badge">#${esc(S.brand.shopId)}</span>
+                            <b>${esc(USER.name)}</b> (${roleName(role)})
+                        </div>
+                    </div>
+                </div>
+                <div class="hdr-tools">
+                    ${(role === "boss" || role === "man") ? `<select onchange="activeLoc=this.value;render()">
+                        <option value="all" ${activeLoc==="all"?"selected":""}>${tr("allLocs")}</option>
+                        ${S.locs.map(l=>`<option value="${l.id}" ${activeLoc==l.id?"selected":""}>📍 ${esc(locTitle(l))}</option>`).join("")}
+                    </select>` : ""}
+                    ${langSelectHtml()}
+                    ${curSelectHtml()}
+                    ${role !== "cust" ? `<button class="b b-sm b-out" onclick="toggleBot(true)">🤖 ${tr("bot")}</button>` : ""}
+                    <button class="b b-sm b-bad" onclick="logout()">🔒 ${tr("lock")}</button>
+                </div>
+            </header>
+            <nav>${tabs.map(t=>`<button class="tab ${t[0]==tab?"on":""}" onclick="go('${t[0]}')">${t[1]}</button>`).join("")}</nav>
+            ${ERR ? `<div class="err">${ERR}</div>` : ""}
+            ${OK ? `<div class="ok-msg">${OK}</div>` : ""}
+            ${V[tab] ? V[tab]() : ""}
+        </div>
+    `;
+    ERR = ""; OK = "";
+    if (tab === "mk") { upd(); }
+    if (tab === "buy") calcBuyForm();
+}
+
+function renderLogin() {
+    const logoHtml = S.brand.logo
+        ? `<img src="${esc(S.brand.logo)}" class="brand-logo">`
+        : `<div class="brand-logo">${esc((S.brand.name||"B").charAt(0).toUpperCase())}</div>`;
+    const lastBioUser = S.users.find(u => u.id == localStorage.getItem(KEY + "-bio-u") && u.bio);
+
+    $("app").innerHTML = `
+        <div class="wrap" style="max-width:460px; margin-top:20px;">
+            <header>
+                <div class="brand-wrap">${logoHtml}<div><h1>${esc(S.brand.name)}</h1><span class="mu">ID: #${esc(S.brand.shopId)}</span></div></div>
+                <div class="hdr-tools">${langSelectHtml()}${curSelectHtml()}</div>
+            </header>
+
+            <div class="seg">
+                <button class="${authMode==='login'?'on':''}" onclick="authMode='login';renderLogin()">🔑 ${tr("login")}</button>
+                <button class="${authMode==='cust'?'on':''}" onclick="authMode='cust';renderLogin()">🛍️ ${tr("custReg")}</button>
+                <button class="${authMode==='reg'?'on':''}" onclick="authMode='reg';renderLogin()">✨ ${tr("reg")}</button>
+            </div>
+
+            ${ERR ? `<div class="err">${ERR}</div>` : ""}
+
+            ${authMode === "login" ? `
+                <div class="c">
+                    <h3>${tr("login")}</h3>
+                    <label>${tr("phone")}<input id="lg" placeholder="boss / menejer / sotuvchi / xaridor"></label>
+                    <label>${tr("pinCode")}<input id="pw" type="password" inputmode="numeric" placeholder="1234"></label>
+                    <button class="b" style="width:100%" onclick="login()">${tr("login")}</button>
+                    ${lastBioUser ? `<button class="b b-out" style="width:100%;margin-top:8px" onclick="bioLogin('${lastBioUser.id}')">${tr("bioBtn")} (${esc(lastBioUser.name)})</button>` : ""}
+                    <p class="mu" style="margin-top:10px">Demo: <b>boss</b>, <b>menejer</b>, <b>sotuvchi</b>, <b>xaridor</b> | PIN: <b>1234</b></p>
+                </div>
+            ` : authMode === "cust" ? `
+                <div class="c">
+                    <h3>🛍️ ${tr("custReg")}</h3>
+                    <label>${tr("fullName")}<input id="cRegNm" placeholder="Aziz Xaridor"></label>
+                    <div class="row">
+                        <label>${tr("phone")}<input id="cRegLg" placeholder="+996..."></label>
+                        <label>${tr("pinCode")}<input id="cRegPw" type="password" inputmode="numeric" value="1234"></label>
+                    </div>
+                    <button class="b b-ok" style="width:100%;margin-top:6px" onclick="registerCustomerAuth()">🚀 ${tr("custReg")}</button>
+                </div>
+            ` : `
+                <div class="c">
+                    <h3>✨ ${tr("reg")}</h3>
+                    <label>${tr("locName")}<input id="rBrand" placeholder="Fayz Sport Market"></label>
+                    <div class="row">
+                        <label>${tr("fullName")}<input id="rName" placeholder="Ibrohim"></label>
+                        <label>${tr("phone")}<input id="rLogin" placeholder="boss"></label>
+                    </div>
+                    <div class="row">
+                        <label>${tr("pinCode")}<input id="rPw" type="password" value="1234"></label>
+                        <label>Promokod<input id="rPromo" placeholder="ID"></label>
+                    </div>
+                    <button class="b" style="width:100%;margin-top:6px" onclick="registerBrand()">🚀 ${tr("reg")}</button>
+                </div>
+            `}
+        </div>
+    `;
+    ERR = "";
+}
+
+/* =========================================================
+   5. MANTIQIY FUNKSIYALAR
+   ========================================================= */
+function login() {
+    const l = $("lg").value.trim(), p = $("pw").value.trim();
+    const u = S.users.find(x => x.login == l && x.pw == p);
+    if (!u) { ERR = "Login / PIN xato!"; renderLogin(); return; }
+    finishAuth(u);
+}
+function bioLogin(uidStr) {
+    const u = S.users.find(x => x.id == uidStr);
+    if (u) finishAuth(u);
+}
+function finishAuth(u) {
+    USER = u; role = u.role;
+    u.lang = S.lang; u.cur = S.cur;
+    activeLoc = (role === "sel" && USER?.loc && USER.loc !== "all") ? USER.loc : "all";
+    try {
+        localStorage.setItem(KEY + "-u", u.id);
+        if (u.bio) localStorage.setItem(KEY + "-bio-u", u.id);
+    } catch(e) {}
+    save(); tab = getTabs()[0][0]; render();
+}
+function registerCustomerAuth() {
+    const nm = $("cRegNm").value.trim(), lg = $("cRegLg").value.trim(), pw = $("cRegPw").value.trim() || "1234";
+    if (!nm || !lg) { ERR = tr("fullName") + " & " + tr("phone") + "!"; renderLogin(); return; }
+    const u = { id: uid(), name: nm, login: lg, pw, role: "cust", loc: "mk1", bio: true };
+    S.users.push(u);
+    if (!S.co.some(c => c.phone === lg)) S.co.push({ id: u.id, name: nm, phone: lg, debt: 0, paidCash: 0, paidCard: 0, t: Date.now() });
+    finishAuth(u);
+}
+function registerCustomerInside() {
+    const nm = $("ncNm").value.trim(), ph = $("ncPh").value.trim(), pw = $("ncPw").value.trim() || "1234";
+    if (!nm || !ph) return fail(tr("fullName") + " & " + tr("phone"));
+    const id = uid();
+    S.co.push({ id, name: nm, phone: ph, debt: 0, paidCash: 0, paidCard: 0, t: Date.now() });
+    S.users.push({ id, name: nm, login: ph, pw, role: "cust", loc: "mk1", bio: true });
+    OK = "✅ " + nm; save(); render();
+}
+function registerBrand() {
+    const br = $("rBrand").value.trim(), lg = $("rLogin").value.trim() || "boss", pw = $("rPw").value.trim() || "1234", nm = $("rName").value.trim() || "Boshliq";
+    if (!br) { ERR = tr("locName") + "!"; renderLogin(); return; }
+    S.brand = { name: br, logo: S.brand.logo, shopId: String(Math.floor(100000 + Math.random() * 900000)), promoBy: $("rPromo").value.trim() };
+    let bossUser = S.users.find(u => u.role === "boss");
+    if (bossUser) { bossUser.name = nm; bossUser.login = lg; bossUser.pw = pw; bossUser.bio = true; }
+    else { bossUser = { id: "u0", name: nm, login: lg, pw, role: "boss", loc: "all", bio: true }; S.users.unshift(bossUser); }
+    finishAuth(bossUser);
+}
+function logout() { USER = null; try { localStorage.removeItem(KEY + "-u"); } catch(e) {} renderLogin(); }
+function saveMyProfile() {
+    if (!USER) return;
+    USER.name = $("pfNm").value.trim() || USER.name;
+    USER.login = $("pfLg").value.trim() || USER.login;
+    USER.pw = $("pfPw").value.trim() || "1234";
+    USER.tg = $("pfTg").value.trim();
+    OK = "✅ " + tr("saveProf"); save(); render();
+}
+
+const go = t => { tab = t; render(); };
+const val = id => +($(id)?.value) || 0;
+const fail = m => { ERR = m; render(); };
+
+// XARID KALKULYATORI MANTIQI
+function uploadBuyImg(input) {
+    const file = input.files && input.files[0]; if (!file) return;
+    const r = new FileReader(); r.onload = e => { tmpBuyImg = e.target.result; }; r.readAsDataURL(file);
+}
+function onUnitBuyInput() {
+    const totPcs = Math.max(1, val("bxn") * val("pc"));
+    const uPr = val("bUnitP");
+    if ($("bTotCur")) $("bTotCur").value = Math.round(totPcs * uPr * 100) / 100;
+    calcBuyForm();
+}
+function onTotalBuyInput() {
+    const totPcs = Math.max(1, val("bxn") * val("pc"));
+    const totCur = val("bTotCur");
+    if ($("bUnitP")) $("bUnitP").value = Math.round((totCur / totPcs) * 100) / 100;
+    calcBuyForm();
+}
+function onKgInput() {
+    const kg = val("bKg"), prKg = val("bKgPr");
+    if (kg > 0 && prKg > 0 && $("bCgTot")) {
+        $("bCgTot").value = Math.round(kg * prKg * 100) / 100;
+    }
+    calcBuyForm();
+}
+function calcBuyForm() {
+    if (!$("bxn")) return;
+    const totPcs = Math.max(1, val("bxn") * val("pc"));
+    const c = $("bCur")?.value || "USD";
+    const rt = S.rate[c] || 1;
+    const totSupCur = val("bTotCur");
+    const totCgCur = val("bCgTot");
+    const otherCur = val("bOther");
+
+    const grandTotalCur = totSupCur + totCgCur + otherCur;
+    const grandTotalUZS = grandTotalCur * rt;
+    const unitCostUZS = grandTotalUZS / totPcs;
+
+    if ($("lblUnitCost")) {
+        $("lblUnitCost").innerHTML = `${f(unitCostUZS)} <small>${S.cur}</small>`;
+    }
+    applyMargins(unitCostUZS);
+}
+function applyMargins(passedUnitUZS) {
+    if (!$("bxn")) return;
+    const totPcs = Math.max(1, val("bxn") * val("pc"));
+    const c = $("bCur")?.value || "USD";
+    const rt = S.rate[c] || 1;
+    const grandTotalUZS = (val("bTotCur") + val("bCgTot") + val("bOther")) * rt;
+    const uCost = passedUnitUZS !== undefined ? passedUnitUZS : (grandTotalUZS / totPcs);
+    if (uCost <= 0) return;
+
+    const mR = val("mRet"), mO = val("mOpt"), mB = val("mBox");
+    const perBx = Math.max(1, val("pc"));
+    if ($("p1")) $("p1").value = Math.round(uCost * (1 + mR / 100));
+    if ($("p2")) $("p2").value = Math.round(uCost * (1 + mO / 100));
+    if ($("p3")) $("p3").value = Math.round(uCost * perBx * (1 + mB / 100));
+}
+
+function addLot() {
+    const nm = $("nm").value.trim(), b = val("bxn"), p = val("pc");
+    if (!nm || b <= 0 || p <= 0) return fail(tr("prodName") + "!");
+    const c = $("bCur")?.value || "USD";
+    const rt = S.rate[c] || 1;
+
+    let supObj = null;
+    if ($("supSel").value === "new") {
+        const sName = $("supNew").value.trim() || "Zavod";
+        supObj = { id: uid(), name: sName, type: "sup", debtUZS: 0 };
+        S.sups.push(supObj);
+    } else supObj = S.sups.find(x => x.id == $("supSel").value);
+
+    let cgObj = null;
+    if ($("cgSel").value === "new") {
+        const cName = $("cgNew").value.trim() || "Kargo";
+        cgObj = { id: uid(), name: cName, type: "cargo", debtUZS: 0 };
+        S.sups.push(cgObj);
+    } else cgObj = S.sups.find(x => x.id == $("cgSel").value);
+
+    const supTotalUZS = val("bTotCur") * rt;
+    if (supObj && supTotalUZS > 0) supObj.debtUZS = (+supObj.debtUZS || 0) + supTotalUZS;
+
+    const cgTotalUZS = val("bCgTot") * rt;
+    if (cgObj && cgTotalUZS > 0) cgObj.debtUZS = (+cgObj.debtUZS || 0) + cgTotalUZS;
+
+    const otherUZS = val("bOther") * rt;
+    const expArr = [];
+    if (cgTotalUZS > 0) expArr.push({ label: (cgObj?cgObj.name:"Kargo") + ` (${val("bKg")} kg)`, amt: cgTotalUZS });
+    if (otherUZS > 0) expArr.push({ label: tr("extraExp"), amt: otherUZS });
+
+    S.lots.push({
+        id: uid(), name: nm, bc: $("bc").value.trim(), img: tmpBuyImg,
+        supName: supObj ? supObj.name : "", cargoName: cgObj ? cgObj.name : "",
+        kg: val("bKg"), initWh: $("initWh")?.value || "wh1",
+        boxes: b, per: p, buy: supTotalUZS, exp: expArr,
+        pRet: val("p1"), pOpt: val("p2"), optMin: val("om") || 5, pBox: val("p3"), promo: 0
+    });
+    tmpBuyImg = ""; OK = "✅ " + nm; save(); render();
+}
+
+function addPartner() {
+    const nm = $("newSpNm").value.trim(), tp = $("newSpTp").value;
+    if (!nm) return fail(tr("newPartner"));
+    S.sups.push({ id: uid(), name: nm, type: tp, debtUZS: 0 });
+    OK = "✅ " + nm; save(); render();
+}
+function payPartnerDebt(idx) {
+    const sp = S.sups[idx], amt = val("spd_" + idx);
+    if (!sp || amt <= 0) return fail(tr("amt") + "!");
+    const amtUZS = amt * curRate();
+    sp.debtUZS = Math.max(0, (+sp.debtUZS || 0) - amtUZS);
+    OK = "✅ " + sp.name; save(); render();
+}
+function delLot(id) { if (!confirm("Delete?")) return; S.lots = S.lots.filter(x => x.id != id); save(); render(); }
+
+// O'TKAZMA
+function moveBetweenLocs() {
+    const l = L($("tl")?.value); if (!l) return;
+    const fromId = $("mvFrom").value, toId = $("mvTo").value;
+    if (fromId === toId) return fail("Bir xil nuqta!");
+    const q = val("tb") * l.per + val("tp");
+    if (q <= 0) return fail(tr("pcs") + "!");
+    const avail = inLoc(l, fromId);
+    if (q > avail) return fail(`${tr("pcs")} > ${avail}!`);
+    S.moves.push({ id: uid(), lot: l.id, q, from: fromId, to: toId, t: Date.now(), by: role });
+    OK = "✅ " + bx(l, q); save(); render();
+}
+
+function setPromoLot(lotId) {
+    const l = L(lotId); if (!l) return;
+    const pct = prompt(`${l.name} — Aksiya chegirma foizi (%):`, l.promo || 15);
+    if (pct === null) return;
+    const numPct = Math.max(0, Math.min(80, +pct || 0));
+    if (!l.origRet) { l.origRet = l.pRet; l.origOpt = l.pOpt; l.origBox = l.pBox; }
+    l.promo = numPct;
+    l.pRet = Math.round(l.origRet * (1 - numPct / 100));
+    l.pOpt = Math.round(l.origOpt * (1 - numPct / 100));
+    l.pBox = Math.round(l.origBox * (1 - numPct / 100));
+    OK = `🔥 ${l.name}: -${numPct}%`; save(); render();
+}
+
+// POS SOTUV (Kozinka va Multi-tovar)
+let sMode = "auto", payType = "cash";
+function pickPos(id) { selLotId = id; if ($("sl")) $("sl").value = id; document.querySelectorAll(".pos-card").forEach(c => c.classList.remove("sel")); upd(); }
+function filterPos() {
+    const q = ($("posQ")?.value || "").toLowerCase().trim();
+    document.querySelectorAll("#posGrid .pos-card").forEach(el => {
+        el.style.display = (el.dataset.nm.includes(q) || el.dataset.bc.includes(q)) ? "flex" : "none";
+    });
+}
+function setSMode(m, btn) {
+    sMode = m;
+    document.querySelectorAll("#sModeSeg button").forEach(b => b.classList.remove("on"));
+    btn.classList.add("on");
+    if (m === "box" && (!val("sb") || val("sb") === 0)) { $("sb").value = 1; $("sp").value = 0; }
+    upd();
+}
+function setPayType(pt, btn) {
+    payType = pt;
+    document.querySelectorAll("#payTypeSeg button").forEach(b => b.classList.remove("on"));
+    btn.classList.add("on");
+    if ($("mixBox")) $("mixBox").style.display = pt === "mix" ? "flex" : "none";
+    if ($("debtBox")) $("debtBox").style.display = pt === "debt" ? "block" : "none";
+}
+const qty = () => { const l = L($("sl")?.value); return l ? [l, val("sb") * l.per + val("sp")] : [null, 0]; };
+function upd() {
+    if (!$("sl")) return;
+    const [l, q] = qty(); if (!l) return;
+    const p = pr(l, q || 1, sMode);
+    $("spr").value = n(p.p); $("tier").textContent = p.t; tot2();
+}
+function tot2() {
+    if (!$("sl")) return;
+    const [l, q] = qty(); if (!l) return;
+    const finalTot = Math.max(0, (q * val("spr")) - val("sdisc"));
+    $("stot").innerHTML = `${q} ${tr("pcs")} = ${f(finalTot)} <small>${S.cur}</small>`;
+}
+
+function posAddToCart() {
+    const [l, q] = qty(); const p = val("spr"), disc = val("sdisc");
+    if (!l || q <= 0 || p <= 0) return fail(tr("pcs") + "!");
+    const curShop = (role === "sel" && USER?.loc && USER.loc !== "all") ? USER.loc : (activeLoc !== "all" ? activeLoc : "mk1");
+    const rem = inMk(l, curShop==="all"?null:curShop);
+    const alreadyInCart = posCart.reduce((a, c) => c.lot == l.id ? a + c.q : a, 0);
+    if (q + alreadyInCart > rem) return fail(tr("inMkCol") + " < " + (q + alreadyInCart));
+
+    const finalTot = Math.max(0, q * p - disc);
+    posCart.push({ lot: l.id, name: l.name, q, p, disc, tot: finalTot });
+    OK = "➕ " + l.name; render();
+}
+
+function sellMulti() {
+    if (!posCart.length) return fail("Chek bo'sh!");
+    const curShop = (role === "sel" && USER?.loc && USER.loc !== "all") ? USER.loc : (activeLoc !== "all" ? activeLoc : "mk1");
+    const grandTot = posCart.reduce((a, c) => a + c.tot, 0);
+    let pCash = 0, pCard = 0, pDebt = 0;
+
+    if (payType === "cash") pCash = grandTot;
+    else if (payType === "card") pCard = grandTot;
+    else if (payType === "mix") {
+        pCash = val("pCashIn"); pCard = val("pCardIn");
+        if (pCash + pCard !== grandTot) return fail("Cash + Card ≠ Total!");
+    } else if (payType === "debt") {
+        pDebt = grandTot;
+        const custId = $("selCustId")?.value;
+        const c = S.co.find(x => x.id == custId);
+        if (c) c.debt = (+c.debt || 0) + grandTot;
+        else return fail(tr("custSelect") + "!");
+    }
+
+    posCart.forEach((item, idx) => {
+        const isFirst = idx === 0;
+        S.sales.push({
+            id: uid(), lot: item.lot, q: item.q, p: item.p, disc: item.disc, tot: item.tot,
+            pCash: isFirst ? pCash : 0, pCard: isFirst ? pCard : 0, pDebt: isFirst ? pDebt : 0,
+            loc: curShop, by: role, t: Date.now()
+        });
+    });
+
+    posCart = [];
+    OK = `✅ ${f(grandTot)} ${S.cur}`;
+    save(); render();
+}
+
+// KATALOG
+function addCart(lotId) {
+    const l = L(lotId); if (!l) return;
+    const q = Math.max(1, +($("cq_" + lotId)?.value) || 1);
+    const rem = inMk(l, null);
+    if (q > rem) return fail(tr("inMkCol") + ": " + rem);
+    const ex = S.cart.find(x => x.lot == lotId);
+    if (ex) ex.q = Math.min(rem, ex.q + q); else S.cart.push({ lot: lotId, q });
+    OK = "🧺 + " + l.name; save(); render();
+}
+function submitOrder() {
+    if (!S.cart || !S.cart.length) return;
+    let totSum = 0;
+    const items = S.cart.map(c => {
+        const l = L(c.lot); const p = l ? pr(l, c.q, "auto").p : 0;
+        totSum += c.q * p; return { lot: c.lot, q: c.q, p };
+    });
+    S.ord.push({
+        id: uid(), custId: USER?.id || "", custName: USER?.name || "Xaridor",
+        phone: $("ordNote")?.value.trim() || USER?.login || "",
+        items, tot: totSum, pCash: totSum, pCard: 0, pDebt: 0, status: "wait", t: Date.now()
+    });
+    S.cart = []; OK = "🚀 " + tr("sendOrd"); save(); render();
+}
+function calcOrdRem(ordId, totSum) {
+    const c = val("oc_" + ordId), k = val("ok_" + ordId);
+    if ($("od_" + ordId)) $("od_" + ordId).value = Math.max(0, totSum - c - k);
+}
+function confirmOrdPay(ordId) {
+    const o = S.ord.find(x => x.id == ordId); if (!o) return;
+    o.pCash = val("oc_" + ordId); o.pCard = val("ok_" + ordId);
+    o.pDebt = Math.max(0, o.tot - o.pCash - o.pCard); o.status = "paid";
+    OK = "💳 " + tr("ordPaid"); save(); render();
+}
+function shipOrder(ordId) {
+    const o = S.ord.find(x => x.id == ordId);
+    if (!o || o.status !== "paid") return;
+    o.items.forEach((it, idx) => {
+        const isFirst = idx === 0;
+        S.sales.push({
+            id: uid(), lot: it.lot, q: it.q, p: it.p, disc: 0, tot: it.q * it.p,
+            pCash: isFirst ? o.pCash : 0, pCard: isFirst ? o.pCard : 0, pDebt: isFirst ? o.pDebt : 0,
+            loc: "mk1", by: role, t: Date.now()
+        });
+    });
+    if (o.pDebt > 0) {
+        let c = S.co.find(x => x.id == o.custId || (o.phone && x.phone == o.phone) || x.name == o.custName);
+        if (c) c.debt = (+c.debt || 0) + o.pDebt;
+    }
+    o.status = "sent"; OK = "🚚 " + tr("ordSent"); save(); render();
+}
+
+function delSale(id) { if (!confirm("Delete?")) return; S.sales = S.sales.filter(s => s.id != id); save(); render(); }
+function handOver() {
+    const a = val("hm"), w = $("hw")?.value || "cash", note = $("hnote")?.value.trim() || "";
+    if (a <= 0) return fail(tr("amt") + "!");
+    S.hand.push({ amt: a, w, note, by: USER?.name || role, t: Date.now() });
+    OK = "✅"; save(); render();
+}
+function addMktExp() {
+    const lb = $("mxLb").value.trim(), a = val("mxAm"), w = $("mxW").value;
+    if (!lb || a <= 0) return fail(tr("amt") + "!");
+    S.mexp.push({ id: uid(), label: lb, amt: a, w, t: Date.now() });
+    OK = "✅"; save(); render();
+}
+function payDebt(idx) {
+    const c = S.co[idx], a = val("dp" + idx), w = $("dw" + idx).value;
+    if (!c || a <= 0) return fail(tr("amt") + "!");
+    if (w === "card") c.paidCard = (+c.paidCard || 0) + a; else c.paidCash = (+c.paidCash || 0) + a;
+    OK = "✅"; save(); render();
+}
+
+// VOZVRAT (Mijozni tanlash, kassadan pul qaytarish yoki nasiyadan ayirish)
+function makeReturn() {
+    const sId = $("retSale")?.value, rq = val("retQ");
+    const custId = $("retCust")?.value;
+    const wallet = $("retWallet")?.value || "cash";
+    const s = S.sales.find(x => x.id == sId);
+    if (!s || rq <= 0 || rq > s.q) return fail(tr("retQty") + "!");
+
+    const unitPrice = s.tot / s.q;
+    const returnTot = Math.round(rq * unitPrice);
+
+    s.q -= rq; s.tot = Math.round(s.q * unitPrice);
+    if (s.q === 0) S.sales = S.sales.filter(x => x.id != sId);
+
+    if (wallet === "debt" && custId) {
+        const c = S.co.find(x => x.id == custId);
+        if (c) c.debt = Math.max(0, (+c.debt || 0) - returnTot);
+    } else {
+        // Kassadan pul qaytarish uchun rasxod yozamiz
+        S.mexp.push({ id: uid(), label: `Vozvrat #${sId.slice(-4)}`, amt: returnTot, w: wallet, t: Date.now() });
+    }
+
+    OK = `🔄 Vozvrat bajarildi: -${f(returnTot)} ${S.cur}`; save(); render();
+}
+
+function addLoc() {
+    const nm = $("locNm").value.trim(), tp = $("locTp").value;
+    if (!nm) return fail(tr("locName") + "!");
+    S.locs.push({ id: uid(), name: nm, type: tp }); save(); render();
+}
+function addStaff() {
+    const nm = $("uNm").value.trim(), lg = $("uLg").value.trim(), pw = $("uPw").value.trim();
+    if (!nm || !lg || !pw) return fail(tr("fullName") + "!");
+    S.users.push({ id: uid(), name: nm, login: lg, pw, role: $("uRl").value, loc: $("uLc")?.value||"all", tg: "", bio: false });
+    OK = "✅"; save(); render();
+}
+function chgUserLoc(uid, loc) { const u = S.users.find(x=>x.id==uid); if(u){ u.loc = loc; save(); } }
+
+function paySub(method) {
+    S.sub.until = Math.max(Date.now(), S.sub.until) + 30 * 864e5;
+    S.sub.plan = "Biznes (1 Oy)";
+    OK = `✅ ${method} OK!`; save(); render();
+}
+function shareRef(url) {
+    const txt = `${S.brand.name} — Promokod: ${S.brand.shopId} -> ${url}`;
+    if (navigator.share) navigator.share({ title: S.brand.name, text: txt, url });
+    else { navigator.clipboard?.writeText(txt); alert("OK!"); }
+}
+function saveBrand() { S.brand.name = $("brNm").value.trim() || "Bozor hisobi"; OK = "✅"; save(); render(); }
+function saveRates() {
+    S.rate.KGS = val("rtKGS") || 145;
+    S.rate.USD = val("rtUSD") || 12600;
+    S.rate.CNY = val("rtCNY") || 1750;
+    S.rate.TJS = val("rtTJS") || 1150;
+    OK = "✅"; save(); render();
+}
+function loadDemoLots() {
+    if (S.lots.length === 0) {
+        const id1 = uid(), id2 = uid();
+        S.lots.push(
+            { id: id1, name: "Nike Air Zoom Krossovka", bc: "8901", img: "", supName: "Matiz Zavod", cargoName: "Fayzstar Cargo", kg: 120, initWh: "wh1", boxes: 10, per: 12, buy: 18000000, exp: [{label:"Fayzstar Cargo", amt:1200000}], pRet: 220000, pOpt: 190000, optMin: 5, pBox: 2160000, promo: 0 },
+            { id: id2, name: "Adidas Sport Kostyum", bc: "8902", img: "", supName: "Matiz Zavod", cargoName: "Fayzstar Cargo", kg: 95, initWh: "wh1", boxes: 8, per: 10, buy: 14000000, exp: [], pRet: 260000, pOpt: 230000, optMin: 4, pBox: 2200000, promo: 0 }
+        );
+        S.moves.push({ id: uid(), lot: id1, q: 36, from: "wh1", to: "mk1", t: Date.now(), by: "boss" });
+        S.moves.push({ id: uid(), lot: id2, q: 20, from: "wh1", to: "mk1", t: Date.now(), by: "boss" });
+        save();
+    }
+    OK = "📦 OK!"; render();
+}
+function delAllAccount() { if (!confirm("Delete all?")) return; localStorage.clear(); location.reload(); }
+function toggleBot(show) {
+    const m = $("botModal"); if (!show) { m.classList.remove("show"); return; }
+    m.classList.add("show");
+    $("botModalTitle").textContent = "🤖 " + tr("bot");
+    $("botBody").innerHTML = `
+        <p class="mu">${tr("botDesc")}</p>
+        <label>Token<input id="btTk" value="${esc(S.bot.token||'')}"></label>
+        <label>Chat ID<input id="btCh" value="${esc(S.bot.chatId||'')}"></label>
+        <div class="row" style="margin-top:10px">
+            <button class="b" onclick="S.bot.token=$('btTk').value.trim();S.bot.chatId=$('btCh').value.trim();save();toggleBot(false)">${tr("saveBtn")}</button>
+            <button class="b b-out" onclick="alert('OK!')">${tr("sendRep")}</button>
+        </div>
+    `;
+}
+
+render();
+</script>
+</body>
+</html>
