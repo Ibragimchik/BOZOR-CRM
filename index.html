@@ -1882,7 +1882,12 @@ function autofillWhLot(valStr) {
         if ($("dwMRet")) $("dwMRet").value = found.mRet || buyPrefs.mRet;
         if ($("dwMOpt")) $("dwMOpt").value = found.mOpt || buyPrefs.mOpt;
         if ($("dwMBox")) $("dwMBox").value = found.mBox || buyPrefs.mBox;
-        calcDirectWhPrices();
+        
+        // Eski belgilangan aniq sotish narxlarini o'zicha o'zgartirmasdan to'g'ridan-to'g'ri joyiga qo'yadi:
+        if ($("dwPRet")) $("dwPRet").value = found.pRet || "";
+        if ($("dwPOpt")) $("dwPOpt").value = found.pOpt || "";
+        if ($("dwPBox")) $("dwPBox").value = found.pBox || "";
+        if ($("dwOptMin")) $("dwOptMin").value = found.optMin || buyPrefs.om;
     }
 }
 
