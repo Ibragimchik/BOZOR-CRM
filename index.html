@@ -1898,33 +1898,73 @@ function autofillWhLot(valStr) {
         }
         if ($("dwOptMin")) $("dwOptMin").value = found.optMin || buyPrefs.om;
     }
-}function autofillWhLot(valStr) {
-    const query = (valStr || "").toLowerCase().trim();
-    if (!query) return;
-    const found = S.lots.find(l => (l.name || "").toLowerCase().includes(query));
-    if (found) {
-        if ($("dwBc")) $("dwBc").value = found.bc || "";
-        if ($("dwCost")) $("dwCost").value = Math.round(unit(found) / curRate() * 100) / 100;
-        if ($("dwMRet")) $("dwMRet").value = found.mRet || buyPrefs.mRet;
-        if ($("dwMOpt")) $("dwMOpt").value = found.mOpt || buyPrefs.mOpt;
-        if ($("dwMBox")) $("dwMBox").value = found.mBox || buyPrefs.mBox;
+}
+    }
+} 
+
+function receiveSingleLotCargo(batchId, lotId) {
+    const b = (S.batches || []).find(x => x.id == batchId);
+    const l = L(lotId);
+    if (!l) return;
+
+    const cgId = $("lCg_" + lotId)?.value;
+    const whId = $("lWh_" + lotId)?.value || "wh1";
+    const kg = val("lKg_" + lotId);
+    const cCur = $("lCur_" + lotId)?.value || buyPrefs.cargoCur || "USD";
+    buyPrefs.cargoCur = cCur;
+    localStorage.setItem(KEY + "-cargoCur", cCur);
+
+    const cargoCostCur = val("lCost_" + lotId);
+    const rt = S.rate[cCur] || 1;
+    const cargoCostUZS = cargoCostCur * rt;
+
+    const cgObj = (S.sups || []).find(x => x.id == cgId);
+    if (cgObj && cargoCostUZS > 0) {
+        cgObj.debtUZS = (+cgObj.debtUZS || 0) + cargoCostUZS;
+    }
+
+    l.status = "ready";
+    l.initWh = whId;
+    l.cargoId = cgObj ? cgObj.id : "";
+    l.cargoName = cgObj ? cgObj.name : "Kargo";
+    l.kg = kg;
+    l.cargoOrigTxt = `${cargoCostCur} ${cCur}`;
+    l.exp = cargoCostUZS > 0 ? [{ label: `${l.cargoName} (${kg} kg, ${cargoCostCur} ${cCur})`, amt: cargoCostUZS }] : [];
+
+    const uCost = unit(l);
+    const mR = l.mRet || buyPrefs.mRet || 25;
+    const mO = l.mOpt || buyPrefs.mOpt || 15;
+    const mB = l.mBox || buyPrefs.mBox || 10;
+    l.pRet = Math.round(uCost * (1 + mR / 100));
+    l.pOpt = Math.round(uCost * (1 + mO / 100));
+    l.pBox = Math.round(uCost * l.per * (1 + mB / 100));
+
+    if (b) {
+        b.cargoId = l.cargoId;
+        b.cargoName = l.cargoName;
+        b.totalKg = (+b.totalKg || 0) + kg;
+        b.cargoCostUZS = (+b.cargoCostUZS || 0) + cargoCostUZS;
+        const batchLots = (b.lotIds || []).map(id => L(id)).filter(Boolean);
+        if (batchLots.every(x => x.status !== "transit")) b.status = "arrived";
+    }
+
+    OK = `✅ «${l.name}» (${l.cargoName}) Skladga qabul qilindi!`;
+    save(); render();
         
-        // Eski belgilangan aniq sotish narxlarini qat'iy o'rnatamiz va bloklaymiz:
-        if ($("dwPRet")) {
-            $("dwPRet").value = found.pRet || "";
-            $("dwPRet").dataset.locked = "true"; // Boshqa funksiyalar o'zgartirmasligi uchun belgi
-        }
-        if ($("dwPOpt")) {
-            $("dwPOpt").value = found.pOpt || "";
-            $("dwPOpt").dataset.locked = "true";
-        }
-        if ($("dwPBox")) {
-            $("dwPBox").value = found.pBox || "";
-            $("dwPBox").dataset.locked = "true";
-        }
+        // Foiz kataklarini bo'sh qoldiramiz, shunda avtomatik hisoblab narxni buzib qo'ymaydi:
+        if ($("dwMRet")) $("dwMRet").value = "";
+        if ($("dwMOpt")) $("dwMOpt").value = "";
+        if ($("dwMBox")) $("dwMBox").value = "";
+        
+        // Eski belgilangan aniq sotish narxlarini to'g'ridan-to'g'ri joyiga qo'yamiz:
+        if ($("dwPRet")) $("dwPRet").value = found.pRet || "";
+        if ($("dwPOpt")) $("dwPOpt").value = found.pOpt || "";
+        if ($("dwPBox")) $("dwPBox").value = found.pBox || "";
         if ($("dwOptMin")) $("dwOptMin").value = found.optMin || buyPrefs.om;
     }
 }
+    }
+} 
 
 function receiveSingleLotCargo(batchId, lotId) {
     const b = (S.batches || []).find(x => x.id == batchId);
