@@ -378,19 +378,74 @@ async function syncToSupabase() {
 async function loadFromSupabase() {
     if (!supabaseClient) return;
     try {
+        const params = new URLSearchParams(location.search);
+        const urlShop = params.get("shop");
+        const urlUser = params.get("u");
+        const targetShopId = urlShop || S.brand.shopId || "default";
+
         const { data, error } = await supabaseClient
             .from('crm_state')
             .select('data')
-            .eq('shop_id', S.brand.shopId || "default")
+            .eq('shop_id', targetShopId)
             .maybeSingle();
+
         if (!error && data && data.data) {
             S = Object.assign(S, data.data);
             localStorage.setItem(KEY, JSON.stringify(S));
+            if (urlUser) {
+                const autoU = (S.users || []).find(x => x.id === urlUser);
+                if (autoU) {
+                    history.replaceState({}, "", location.pathname);
+                    finishAuth(autoU);
+                    return;
+                }
+            }
             render();
         }
     } catch (e) {}
 }
 
+function copyStaffLink(uidStr) {
+    const link = `${location.origin}${location.pathname}?shop=${S.brand.shopId}&u=${uidStr}`;
+    navigator.clipboard?.writeText(link);
+    OK = "📲 Kirish ssilkasi nusxalandi! Xodimga Telegramdan yuboring.";
+    render();
+}async function loadFromSupabase() {
+    if (!supabaseClient) return;
+    try {
+        const params = new URLSearchParams(location.search);
+        const urlShop = params.get("shop");
+        const urlUser = params.get("u");
+        const targetShopId = urlShop || S.brand.shopId || "default";
+
+        const { data, error } = await supabaseClient
+            .from('crm_state')
+            .select('data')
+            .eq('shop_id', targetShopId)
+            .maybeSingle();
+
+        if (!error && data && data.data) {
+            S = Object.assign(S, data.data);
+            localStorage.setItem(KEY, JSON.stringify(S));
+            if (urlUser) {
+                const autoU = (S.users || []).find(x => x.id === urlUser);
+                if (autoU) {
+                    history.replaceState({}, "", location.pathname);
+                    finishAuth(autoU);
+                    return;
+                }
+            }
+            render();
+        }
+    } catch (e) {}
+}
+
+function copyStaffLink(uidStr) {
+    const link = `${location.origin}${location.pathname}?shop=${S.brand.shopId}&u=${uidStr}`;
+    navigator.clipboard?.writeText(link);
+    OK = "📲 Kirish ssilkasi nusxalandi! Xodimga Telegramdan yuboring.";
+    render();
+}
 const save = () => {
     try {
         localStorage.setItem(KEY, JSON.stringify(S));
@@ -1448,8 +1503,9 @@ const V = {
                             return `<label style="font-size:.8rem;cursor:pointer"><input type="checkbox" ${assigned?'checked':''} onchange="toggleUserLoc('${u.id}','${l.id}',this.checked)"> ${esc(locTitle(l))}</label>`;
                         }).join("")}
                     </div>
-                </td>
-                <td class="r"><button class="x" onclick="delStaff('${u.id}')">🗑️</button></td>
+                < class="r">
+    <button class="b b-sm b-out" title="1-klik bilan kirish ssilkasi" onclick="copyStaffLink('${u.id}')">📲 Ssilka</button>
+    <button class="x" onclick="delStaff('${u.id}')">🗑️</button>
             </tr>`).join("")}</table></div>
         </div>`;
     },
@@ -1670,17 +1726,37 @@ function renderLogin() {
     ERR = ""; OK = "";
 }
 
-function login() {
+async function login() {
     const l = ($("lg")?.value || "").trim().toLowerCase();
     const selRole = $("lgRole")?.value || "";
     const p = ($("pw")?.value || "").trim();
 
-    const u = S.users.find(x => {
+    const checkUser = (usersArr) => (usersArr || []).find(x => {
         const matchName = (x.name || "").toLowerCase() === l;
         const matchLogin = (x.login || "").toLowerCase() === l;
         const matchRole = !selRole || x.role === selRole;
         return (matchName || matchLogin) && matchRole && x.pw == p;
     });
+
+    let u = checkUser(S.users);
+
+    // Agar shu qurilmada topilmasa, Supabase bazadan barcha do'konlar ichidan qidiradi:
+    if (!u && supabaseClient) {
+        try {
+            const { data } = await supabaseClient.from('crm_state').select('shop_id, data');
+            if (data && data.length) {
+                for (const row of data) {
+                    const found = checkUser(row.data?.users);
+                    if (found) {
+                        S = Object.assign(S, row.data);
+                        localStorage.setItem(KEY, JSON.stringify(S));
+                        u = found;
+                        break;
+                    }
+                }
+            }
+        } catch (e) {}
+    }
 
     if (!u) {
         if ($("lg")) $("lg").classList.add("input-err");
