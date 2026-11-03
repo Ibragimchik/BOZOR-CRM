@@ -1883,10 +1883,45 @@ function autofillWhLot(valStr) {
         if ($("dwMOpt")) $("dwMOpt").value = found.mOpt || buyPrefs.mOpt;
         if ($("dwMBox")) $("dwMBox").value = found.mBox || buyPrefs.mBox;
         
-        // Eski belgilangan aniq sotish narxlarini o'zicha o'zgartirmasdan to'g'ridan-to'g'ri joyiga qo'yadi:
-        if ($("dwPRet")) $("dwPRet").value = found.pRet || "";
-        if ($("dwPOpt")) $("dwPOpt").value = found.pOpt || "";
-        if ($("dwPBox")) $("dwPBox").value = found.pBox || "";
+        // Eski belgilangan aniq sotish narxlarini qat'iy o'rnatamiz va bloklaymiz:
+        if ($("dwPRet")) {
+            $("dwPRet").value = found.pRet || "";
+            $("dwPRet").dataset.locked = "true"; // Boshqa funksiyalar o'zgartirmasligi uchun belgi
+        }
+        if ($("dwPOpt")) {
+            $("dwPOpt").value = found.pOpt || "";
+            $("dwPOpt").dataset.locked = "true";
+        }
+        if ($("dwPBox")) {
+            $("dwPBox").value = found.pBox || "";
+            $("dwPBox").dataset.locked = "true";
+        }
+        if ($("dwOptMin")) $("dwOptMin").value = found.optMin || buyPrefs.om;
+    }
+}function autofillWhLot(valStr) {
+    const query = (valStr || "").toLowerCase().trim();
+    if (!query) return;
+    const found = S.lots.find(l => (l.name || "").toLowerCase().includes(query));
+    if (found) {
+        if ($("dwBc")) $("dwBc").value = found.bc || "";
+        if ($("dwCost")) $("dwCost").value = Math.round(unit(found) / curRate() * 100) / 100;
+        if ($("dwMRet")) $("dwMRet").value = found.mRet || buyPrefs.mRet;
+        if ($("dwMOpt")) $("dwMOpt").value = found.mOpt || buyPrefs.mOpt;
+        if ($("dwMBox")) $("dwMBox").value = found.mBox || buyPrefs.mBox;
+        
+        // Eski belgilangan aniq sotish narxlarini qat'iy o'rnatamiz va bloklaymiz:
+        if ($("dwPRet")) {
+            $("dwPRet").value = found.pRet || "";
+            $("dwPRet").dataset.locked = "true"; // Boshqa funksiyalar o'zgartirmasligi uchun belgi
+        }
+        if ($("dwPOpt")) {
+            $("dwPOpt").value = found.pOpt || "";
+            $("dwPOpt").dataset.locked = "true";
+        }
+        if ($("dwPBox")) {
+            $("dwPBox").value = found.pBox || "";
+            $("dwPBox").dataset.locked = "true";
+        }
         if ($("dwOptMin")) $("dwOptMin").value = found.optMin || buyPrefs.om;
     }
 }
