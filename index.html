@@ -43,6 +43,8 @@
     label{display:block;font-size:.81rem;color:var(--mu);margin-bottom:6px;flex:1;min-width:120px}
     input,select,textarea{width:100%;box-sizing:border-box;padding:9px 11px;margin-top:3px;border:1px solid var(--ln);border-radius:10px;background:#0b1120;color:var(--ink);font:14.5px Onest,system-ui,sans-serif;outline:none}
     input:focus,select:focus{border-color:var(--ac);box-shadow:0 0 0 2px rgba(59,130,246,0.2)}
+    @keyframes blinkErr { 0% { border-color: var(--bad); box-shadow: 0 0 0 2px rgba(239,68,68,0.5); } 50% { border-color: var(--ln); box-shadow: none; } 100% { border-color: var(--bad); box-shadow: 0 0 0 2px rgba(239,68,68,0.5); } }
+    .input-err { animation: blinkErr 0.8s infinite; border-color: var(--bad) !important; }
     .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px}
     .b{background:var(--ac);color:#fff;border:0;border-radius:10px;padding:10px 15px;font:600 14px Onest,system-ui,sans-serif;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:0.2s}
     .b:hover{opacity:0.92;transform:translateY(-1px)}
@@ -91,7 +93,6 @@
   </div>
 </div>
 
-<!-- SHTRIX-KOD KAMERA SKANERI OYNASI -->
 <div id="scanModal" class="modal-bg">
   <div class="modal-c">
     <h3><span>📷 Shtrix-kod / QR Skaner</span><button class="x" onclick="stopScanner()">✕</button></h3>
@@ -101,9 +102,6 @@
 </div>
 
 <script>
-/* =========================================================
-   0. SUPABASE XATOSIZ ULANISH
-   ========================================================= */
 const supabaseUrl = 'https://lokihgywgmlgejxsmhuu.supabase.co';
 const supabaseKey = 'sb_publishable_Zks7tBKSRvREFzIFYZYjjA_Vu2PMxvc';
 
@@ -113,13 +111,8 @@ try {
         supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
         window.supabaseClient = supabaseClient;
     }
-} catch (e) {
-    console.warn("Supabase init warning:", e);
-}
+} catch (e) {}
 
-/* =========================================================
-   1. TO'LIQ 7 TILLI LUG'AT (UZ, KG, RU, EN, ZH, KZ, TJ)
-   ========================================================= */
 const I18N = {
     uz: {
         home:"Bosh sahifa", buy:"Sotib olish", trf:"Oʻtkazma", wh:"Sklad", mk:"Sotuv (POS)", ord:"Buyurtmalar", cat:"Katalog", cash:"Kassa", debt:"Mijoz & Nasiya", staff:"Sklad & Xodim", sub:"Obuna", prof:"Profil", bot:"Bot", lock:"Chiqish",
@@ -136,7 +129,7 @@ const I18N = {
         otherExp:"Qoʻshimcha rasxod", calcUnitCost:"📌 1 dona aniq Tannarxi",
         mrgRet:"Dona foydasi (%)", mrgOpt:"Optim foydasi (%)", mrgBox:"Karobka foydasi (%)",
         addLotBtn:"➕ Xaridni Saqlash va Skladga Kirim Qilish", costBase:"Tannarx", extraExp:"Qoʻshimcha xarajat", amt:"Summa", addBtn:"Qoʻshish", totCost:"Jami Tannarx",
-        whTitle:"📋 Sklad, Reyting (⭐) va Aksiya", inWhCol:"Skladda", inMkCol:"Doʻkonda", soldCol:"Sotilgan", ratingCol:"Reyting", promoCol:"Aksiya", makePromo:"🔥 Aksiya (-%)", promoActive:"🔥 Aksiyada", noProd:"Hali tovar yoʻq.",
+        whTitle:"📋 Sklad, Reyting (⭐) va Jami Optim Summa", inWhCol:"Skladda", inMkCol:"Doʻkonda", soldCol:"Sotilgan", ratingCol:"Reyting", promoCol:"Aksiya", makePromo:"🔥 Aksiya (-%)", promoActive:"🔥 Aksiyada", noProd:"Hali tovar yoʻq.",
         mvTitle:"🔄 Oʻtkazma (Sklad ⇄ Sklad, Sklad ⇄ Doʻkon)", fromLoc:"Qayerdan", toLoc:"Qayerga", selProd:"Tovarni tanlang", confirmMv:"✅ Oʻtkazmani tasdiqlash", mvHist:"📜 Oxirgi Oʻtkazmalar", time:"Vaqt",
         posProds:"🛒 Doʻkondagi Tovarlar", searchPh:"🔍 Nom yoki shtrix-kod...", posTerm:"🧾 Kassa Terminali (Koʻp tovarli)", saleMode:"Sotuv rejimi", auto:"Avto", unitPr:"1 dona narxi", finalSum:"Yakuniy summa", payMethod:"Toʻlov usuli", cashPay:"💵 Naqd", cardPay:"💳 Karta", mixPay:"🔄 Aralash", debtPay:"📒 Nasiya", custSelect:"Mijozni tanlang", newCustName:"Yangi mijoz ismi", addCartBtn:"➕ Roʻyxatga Qoʻshish", finishSale:"✅ Sotuvni Yakunlash",
         catTitle:"🛍️ Doʻkon Katalogi", cartTitle:"🧺 Korzinka va Buyurtma", addToCart:"➕ Korzinkaga", emptyCart:"Korzinka boʻsh", sendOrd:"🚀 Buyurtmani Yuborish", myOrds:"📦 Mening Buyurtmalarim",
@@ -145,7 +138,7 @@ const I18N = {
         debtList:"📒 Mijozlar va Nasiyalar Daftari", addCustTitle:"👤 Yangi Xaridor Qoʻshish", remDebt:"Qolgan qarz", payBtn:"Toʻlash / Olindi", closed:"Yopilgan", retTitle:"🔄 Tovar Qaytarish (Vozvrat)", retQty:"Qaytarilgan dona", retBtn:"🔄 Vozvrat qilish",
         myLocs:"🏢 Sklad va Doʻkonlar", locName:"Nuqta nomi", type:"Turi", shop:"🏪 Doʻkon", warehouse:"🏭 Sklad", addStaffTitle:"👥 Yangi Xodim Qoʻshish", staffList:"📋 Xodimlar Roʻyxati",
         subPlan:"Joriy Tarif", remDays:"Qolgan Faol Muddat", bonusDays:"Bonus Kunlar", days:"kun", extSub:"💳 Obunani Uzaytirish", refTitle:"🎁 Promokod va Doʻstlarni Taklif Qilish", copy:"📋 Nusxa", share:"📤 Ulashish",
-        myProf:"👤 Shaxsiy Profilni Tahrirlash", fullName:"Ism / F.I.O", phone:"Telefon / Login", pinCode:"PIN-код (4 raqam)", email:"Email pochta", tgUser:"Telegram (@username)", bioSetup:"🫆 Barmoq izi / Tezkor PIN kirishni yoqish", saveProf:"💾 Profilni Saqlash", brandSet:"🏷️ Brend va Logotip", curSet:"💱 Valyuta Kurslari", saveBtn:"💾 Saqlash", demoBtn:"📦 Namuna Tovarlar Yuklash", delAcc:"🗑️ Akkauntni Oʻchirish",
+        myProf:"👤 Shaxsiy Profilni Tahrirlash", fullName:"Ism / F.I.O", phone:"Telefon / Login", pinCode:"PIN-код (4 raqam)", email:"Email pochta", tgUser:"Telegram (@username)", bioSetup:"🫆 Barmoq izi / Tezkor PIN kirishni yoqish", saveProf:"💾 Profilni Saqlash", brandSet:"🏷️ Brend va Logotip", curSet:"💱 Valyuta Kurslari (7 xil)", saveBtn:"💾 Saqlash", demoBtn:"📦 Namuna Tovarlar Yuklash", delAcc:"🗑️ Akkauntni Oʻchirish",
         botDesc:"Har bir sotuv, buyurtma va kassa topshirigʻi haqida Telegramga hisobot boradi.", sendRep:"📤 Hisobotni yuborish"
     },
     kg: {
@@ -166,7 +159,7 @@ const I18N = {
         whTitle:"📋 Склад, Рейтинг (⭐) жана Акция", inWhCol:"Складда", inMkCol:"Дүкөндө", soldCol:"Сатылды", ratingCol:"Рейтинг", promoCol:"Акция", makePromo:"🔥 Акция (-%)", promoActive:"🔥 Акцияда", noProd:"Азырынча товар жок.",
         mvTitle:"🔄 Которуу (Склад ⇄ Склад, Склад ⇄ Дүкөн)", fromLoc:"Кайдан", toLoc:"Кайда", selProd:"Товарды тандаңыз", confirmMv:"✅ Которууну тастыктоо", mvHist:"📜 Акыркы Которуулар", time:"Убакыт",
         posProds:"🛒 Дүкөндөгү Товарлар", searchPh:"🔍 Аты же штрих-код...", posTerm:"🧾 Касса Терминалы (Көп товарлуу)", saleMode:"Сатуу режими", auto:"Авто", unitPr:"1 даана баасы", finalSum:"Жыйынтык сумма", payMethod:"Төлөм түрү", cashPay:"💵 Накталай", cardPay:"💳 Карта", mixPay:"🔄 Аралаш", debtPay:"📒 Насия", custSelect:"Кардарды тандаңыз", newCustName:"Жаңы кардардын аты", addCartBtn:"➕ Тизмеге Кошуу", finishSale:"✅ Сатууну Аяктоо",
-        catTitle:"🛍️ Дүкөн Каталогу", cartTitle:"🧺 Себет жана Буйрутма", addToCart:"➕ Себетке кошуу", emptyCart:"Себет бош", sendOrd:"🚀 Буйрутма Жиберүү", myOrds:"📦 Менин Буйрутмаларым",
+        catTitle:"🛍️ Дүкен Каталогу", cartTitle:"🧺 Себет жана Буйрутма", addToCart:"➕ Себетке кошуу", emptyCart:"Себет бош", sendOrd:"🚀 Буйрутма Жиберүү", myOrds:"📦 Менин Буйрутмаларым",
         ordTitle:"📦 Кардар Буйрутмаларын Кабыл Алуу", noOrds:"Жаңы буйрутмалар жок.", ordWait:"⏳ Күтүүдө", ordPaid:"💳 Төлөм тастыкталды", ordSent:"✅ Жиберилди", confirmPay:"1. Төлөм / Насияны Тастыктоо", sendProdBtn:"2. 🚚 Товарды Жибердик", paidCashLbl:"Алынган Накталай", paidCardLbl:"Алынган Карта", remDebtLbl:"Калган Насия",
         handTitle:"🤝 Башчыга акча тапшыруу", fromWallet:"Кайсы капчыктан?", note:"Түшүндүрмө", handBtn:"✅ Тапшырылды", mktExpTitle:"💸 Базар чыгымдары (Расход)", reason:"Себеби", expBtn:"➖ Чыгымдоо", lastSales:"🧾 Акыркы Сатуулар",
         debtList:"📒 Кардарлар жана Насия Дептери", addCustTitle:"👤 Жаңы Кардар Кошуу", remDebt:"Калган карыз", payBtn:"Төлөө / Алынды", closed:"Жабылган", retTitle:"🔄 Товар Кайтаруу (Возврат)", retQty:"Кайтарылган даана", retBtn:"🔄 Возврат кылуу",
@@ -312,14 +305,10 @@ const I18N = {
     }
 };
 
-/* =========================================================
-   2. BAZA, SUPABASE SINXRONIZATSIYA VA DOIMIY XOTIRA
-   ========================================================= */
 const KEY = "bozor-hisobi-v1";
 const PREF_LANG = localStorage.getItem(KEY + "-lang") || "uz";
 const PREF_CUR  = localStorage.getItem(KEY + "-cur")  || "UZS";
 
-// Doimiy saqlanadigan forma qiymatlari (o'zgarib ketmasligi uchun)
 let buyPrefs = {
     supId: "",
     cur: localStorage.getItem(KEY + "-buyCur") || "USD",
@@ -454,7 +443,7 @@ let USER = null, role = "boss", tab = "home", ERR = "", OK = "", activeLoc = "al
 let activePartnerId = null;
 let openBatchId = null;
 let showDirectWhAdd = false;
-let posSelectedCustId = ""; // POS da tanlangan mijoz (sotuv yakunlanguncha o'zgarib ketmaydi)
+let posSelectedCustId = "";
 
 try { USER = S.users.find(u => u.id == localStorage.getItem(KEY + "-u")) || null; } catch(e) {}
 if (USER) {
@@ -609,7 +598,6 @@ const V = {
         </div>` : `<div class="c">${tr("startImp")}</div>`);
     },
 
-    // SOTIB OLISH (Valyuta va foyda % lari o'zgarib ketmaydi, har bir tovarga alohida kargo va yo'lkira yoziladi)
     buy() {
         const sups = (S.sups || []).filter(x => x.type !== "cargo");
         const cargos = (S.sups || []).filter(x => x.type === "cargo");
@@ -765,7 +753,6 @@ const V = {
             <div class="c">
                 <h3>${tr("impNew")}</h3>
                 
-                <!-- 1-QATOR: FAQAT MAGAZIN NOMI -->
                 <div class="row">
                     <label style="width:100%">${tr("supName")}
                         <select id="supSel" onchange="buyPrefs.supId=this.value;$('supNew').style.display=this.value==='new'?'block':'none'">
@@ -776,7 +763,6 @@ const V = {
                     </label>
                 </div>
 
-                <!-- 2-QATOR: TOVAR NOMI VA SHTRIX-KOD (+ SKANER) -->
                 <div class="row">
                     <label style="flex:2">${tr("prodName")}<input id="nm" placeholder="Nike Air Zoom..."></label>
                     <label style="flex:1">${tr("barcode")}
@@ -787,12 +773,10 @@ const V = {
                     </label>
                 </div>
 
-                <!-- 3-QATOR: RASM -->
                 <label>${tr("prodImg")}
                     <input type="file" accept="image/*" onchange="uploadBuyImg(this)">
                 </label>
 
-                <!-- 4-QATOR: KAROBKA VA DONA -->
                 <div class="row">
                     ${num("bxn",tr("boxCnt"),"","","")}
                     ${num("pc",tr("perBox"),"","","")}
@@ -811,7 +795,6 @@ const V = {
 
                 <button class="b b-tp" style="width:100%;margin-top:8px" onclick="V.addItemToBuyCart()">➕ Roʻyxatga qoʻshish (Ketma-ketlik)</button>
 
-                <!-- KIRITILAYOTGAN TOVARLAR KETMA-KETLIGI RO'YXATI -->
                 <div style="margin:14px 0;max-height:240px;overflow-y:auto">
                     ${buyCart.length ? `<table>
                         <tr><th>№</th><th>Tovar</th><th>Karobka / Dona</th><th class="r">Summa (${buyPrefs.cur})</th><th></th></tr>
@@ -852,7 +835,13 @@ const V = {
         saveBuyPrefs();
         const nm = $("nm")?.value.trim();
         const bx = val("bxn"), pc = val("pc"), pr = val("bUnitP");
-        if (!nm || bx <= 0 || pc <= 0 || pr <= 0) { alert("Tovar nomi, karobka va narxini to'liq kiriting!"); return; }
+        if (!nm || bx <= 0 || pc <= 0 || pr <= 0) {
+            if ($("nm")) $("nm").classList.add("input-err");
+            if ($("bxn")) $("bxn").classList.add("input-err");
+            if ($("pc")) $("pc").classList.add("input-err");
+            if ($("bUnitP")) $("bUnitP").classList.add("input-err");
+            return fail("Tovar nomi, karobka va xarid narxini to'liq kiriting!");
+        }
 
         const totPcs = bx * pc;
         const totCur = Math.round(totPcs * pr * 100) / 100;
@@ -869,7 +858,7 @@ const V = {
 
     saveWholeBuyBatch() {
         saveBuyPrefs();
-        if (!buyCart.length) { alert("Avval tovarlarni roʻyxatga qoʻshing!"); return; }
+        if (!buyCart.length) return fail("Avval tovarlarni roʻyxatga qoʻshing!");
 
         const cur = buyPrefs.cur;
         const rt = S.rate[cur] || 1;
@@ -978,10 +967,16 @@ const V = {
         }).join("")}</table></div></div>` : "");
     },
 
-    // SKLAD BO'LIMI (+ SKANER, KAROBKA=0 BO'LGANDA QOLDIQ DONA KIRITISH VA SAQLAGACH 0 GA TUSHIRISH)
     wh() {
         const whs = S.locs.filter(x => x.type === "wh");
         const readyLots = S.lots.filter(l => l.status !== "transit");
+        const isBoss = (role === "boss");
+        
+        const totalOptSum = readyLots.reduce((acc, l) => {
+            const q = tot(l);
+            const optP = l.pOpt || l.pRet || 0;
+            return acc + (q * optP);
+        }, 0);
 
         return `<div class="c">
             <h3>
@@ -993,7 +988,12 @@ const V = {
             ${showDirectWhAdd ? `
                 <div class="calc-box" style="margin-top:10px">
                     <div class="row">
-                        <label style="flex:2">${tr("prodName")}<input id="dwNm" placeholder="Masalan: Adidas Futbolka..."></label>
+                        <label style="flex:2">${tr("prodName")}
+                            <input id="dwNm" placeholder="Tovar nomi..." list="existLotsList" oninput="autofillWhLot(this.value)">
+                            <datalist id="existLotsList">
+                                ${S.lots.map(l=>`<option value="${esc(l.name)}">`).join("")}
+                            </datalist>
+                        </label>
                         <label style="flex:1">${tr("barcode")}
                             <div style="display:flex;gap:4px">
                                 <input id="dwBc" placeholder="Shtrix-kod">
@@ -1024,14 +1024,18 @@ const V = {
                     </div>
                     <button class="b b-ok" style="width:100%;margin-top:8px" onclick="addDirectWhProduct()">💾 Tayyor tovarni Skladga saqlash</button>
                 </div>
-            ` : `<p class="mu" style="margin:0">Ilgaridan skladingizda bor boʻlgan tayyor tovarlarni shtrix-kod skaneri, rasm, karobka yoki donalik qoldiq soni bilan toʻgʻridan-toʻgʻri shu yerdan qoʻshishingiz mumkin.</p>`}
+            ` : `<p class="mu" style="margin:0">Ilgaridan skladingizda bor boʻlgan tayyor tovarlarni shtrix-kod skaneri, ism boʻyicha qidirib yoki yangidan qoʻshishingiz mumkin.</p>`}
         </div>
 
-        <div class="c"><h3>${tr("whTitle")}</h3>` + 
+        <div class="c">
+            <h3>
+                <span>${tr("whTitle")}</span>
+                <span class="badge badge-ok">Jami Optim Summa: ${f(totalOptSum)} ${S.cur}</span>
+            </h3>` + 
         (readyLots.length ? `<div class="tw"><table>
             <tr>
                 <th>${tr("prodName")}</th>
-                <th>${tr("costBase")}</th>
+                ${isBoss ? `<th>${tr("costBase")}</th>` : ""}
                 <th>Sotish (Dona / Optim)</th>
                 <th>${tr("inWhCol")}</th>
                 <th>${tr("inMkCol")}</th>
@@ -1047,7 +1051,7 @@ const V = {
                         ${l.img ? `<img src="${esc(l.img)}" style="width:28px;height:28px;border-radius:6px;vertical-align:middle;object-fit:cover;margin-right:6px">` : ""}
                         <b>${esc(l.name)}</b> ${l.bc?`<span class="badge">#${esc(l.bc)}</span>`:""} ${l.promo?`<span class="badge badge-tp">${tr("promoActive")} -${l.promo}%</span>`:""}
                     </td>
-                    <td><b>${f(unit(l))}</b> <small>${S.cur}</small></td>
+                    ${isBoss ? `<td><b>${f(unit(l))}</b> <small>${S.cur}</small></td>` : ""}
                     <td><b>${f(l.pRet)}</b> / <span class="mu">${f(l.pOpt)} ${S.cur}</span></td>
                     <td>${bx(l,inWh(l, activeLoc==="all"?null:activeLoc))}</td>
                     <td>${bx(l,inMk(l, activeLoc==="all"?null:activeLoc))}</td>
@@ -1062,7 +1066,6 @@ const V = {
         </table></div>` : `<p class="mu">${tr("noProd")}</p>`) + `</div>`;
     },
 
-    // SOTUV TERMINALI (+ SKANER VA OPTIM/NASIYA MIJOZ TANLASH — SOTUV YAKUNLANGUNCHA SAQLANIB TURADI)
     mk() {
         const curShop = (role === "sel" && USER?.loc && USER.loc !== "all") ? USER.loc : (activeLoc !== "all" ? activeLoc : null);
         const av = S.lots.filter(l => inMk(l, curShop) > 0);
@@ -1116,7 +1119,6 @@ const V = {
                     <button type="button" class="${sMode==='box'?'on':''}" onclick="setSMode('box',this)">${tr("prBox")}</button>
                 </div>
 
-                <!-- OPTIM YOKI NASIYA BO'LGANDA MIJOZ TANLASH (SOTUV YAKUNLANGUNCHA O'ZGARMAYDI) -->
                 <div id="custBoxPos" style="display:${showCustBox?'block':'none'};margin-bottom:8px">
                     <label>👤 Optimchi / Xaridor mijozni tanlang:
                         <select id="selCustId" onchange="posSelectedCustId=this.value">
@@ -1147,7 +1149,7 @@ const V = {
                             <td class="r"><b>${f(it.tot)}</b></td>
                             <td class="r"><button class="x" onclick="posCart.splice(${idx},1);render()">×</button></td>
                         </tr>`).join("")}
-                    </table>` : `<p class="mu" style="text-align:center;margin:8px 0">Chek bo‘sh (tovar qo‘shilmagan)</p>`}
+                    </table>` : `<p class="mu" style="text-align:center;margin:8px 0">Chek bo‘sh (tovar qoʻshilmagan)</p>`}
                 </div>
 
                 <div class="c" style="background:var(--bg);margin:8px 0;padding:10px">
@@ -1467,6 +1469,9 @@ const V = {
     },
 
     prof() {
+        const curList = ["UZS", "KGS", "USD", "CNY", "RUB", "KZT", "TJS"];
+        const otherCurs = curList.filter(c => c !== S.cur);
+
         return `<div class="g2">
             <div class="c">
                 <h3>${tr("myProf")}</h3>
@@ -1487,13 +1492,16 @@ const V = {
                 <button class="b" onclick="saveBrand()">${tr("saveBtn")}</button>
 
                 <h3 style="margin-top:16px">${tr("curSet")}</h3>
+                <label>🌐 Asosiy hisob-kitob valyutasi (1-qator):
+                    <select id="mainCurSel" onchange="setCur(this.value)">
+                        ${curList.map(c=>`<option value="${c}" ${S.cur===c?"selected":""}>${c}</option>`).join("")}
+                    </select>
+                </label>
+                <div class="mu" style="margin:6px 0 10px">Qolgan valyutalarning 1 ${S.cur} ga nisbatan kurslarini kiriting:</div>
                 <div class="row">
-                    ${num("rtKGS","1 KGS", "", S.rate.KGS)}
-                    ${num("rtUSD","1 USD", "", S.rate.USD)}
-                    ${num("rtCNY","1 CNY", "", S.rate.CNY)}
-                    ${num("rtTJS","1 TJS", "", S.rate.TJS)}
+                    ${otherCurs.map(c => num("rt_" + c, `1 ${c} (${S.cur} da)`, "", S.rate[c] || 1)).join("")}
                 </div>
-                <button class="b" onclick="saveRates()">${tr("saveBtn")}</button>
+                <button class="b" onclick="saveAllRates()">${tr("saveBtn")}</button>
             </div>` : ""}
         </div>
 
@@ -1506,9 +1514,6 @@ const V = {
     }
 };
 
-/* =========================================================
-   4. RENDER VA AUTH
-   ========================================================= */
 const langSelectHtml = () => `<select onchange="setLang(this.value)">
     <option value="uz" ${S.lang==="uz"?"selected":""}>🇺🇿 Oʻzbek</option>
     <option value="kg" ${S.lang==="kg"?"selected":""}>🇰🇬 Кыргызча</option>
@@ -1591,21 +1596,21 @@ function renderLogin() {
             ${authMode === "login" ? `
                 <div class="c">
                     <h3>${tr("login")}</h3>
-                    <label>${tr("phone")}<input id="lg" placeholder="boss / menejer / sotuvchi / xaridor"></label>
+                    <label>Login (Telefon) yoki Ism<input id="lg" placeholder="boss / Menejer / Sotuvchi..."></label>
                     <label>${tr("pinCode")}<input id="pw" type="password" inputmode="numeric" placeholder="1234"></label>
                     <button class="b" style="width:100%" onclick="login()">${tr("login")}</button>
                     ${lastBioUser ? `<button class="b b-out" style="width:100%;margin-top:8px" onclick="bioLogin('${lastBioUser.id}')">${tr("bioBtn")} (${esc(lastBioUser.name)})</button>` : ""}
                     <button class="b b-out" style="width:100%;margin-top:8px;border-style:dashed;color:var(--tp)" onclick="authMode='forgot';renderLogin()">❓ Men parolni unutdim (PIN tiklash)</button>
-                    <p class="mu" style="margin-top:10px">Demo: <b>boss</b>, <b>menejer</b>, <b>sotuvchi</b>, <b>xaridor</b> | PIN: <b>1234</b></p>
+                    <p class="mu" style="margin-top:10px">Demo: <b>boss</b>, <b>menejer</b>, <b>sotuvchi</b> | PIN: <b>1234</b></p>
                 </div>
             ` : authMode === "forgot" ? `
                 <div class="c">
                     <h3>🔑 Parolni (PIN-kodni) tiklash</h3>
                     <p class="mu">Roʻyxatdan oʻtgan Login (telefon) yoki Ismingizni kiriting va yangi PIN-kod oʻrnating:</p>
-                    <label>${tr("phone")} yoki ${tr("fullName")}<input id="fgLg" placeholder="boss yoki Ibrohim..."></label>
-                    <label>Yangi ${tr("pinCode")}<input id="fgNewPw" type="password" inputmode="numeric" placeholder="Yangi 4 raqamli PIN (masalan: 1234)"></label>
+                    <label>Login (telefon) yoki Ism<input id="fgLg" placeholder="menejer yoki Ali..."></label>
+                    <label>Yangi ${tr("pinCode")}<input id="fgNewPw" type="password" inputmode="numeric" placeholder="Yangi 4 raqamli PIN"></label>
                     <div class="row" style="margin-top:10px">
-                        <button class="b b-ok" style="flex:2" onclick="resetForgotPw()">💾 Yangi parolni saqlash va Kirish</button>
+                        <button class="b b-ok" style="flex:2" onclick="resetForgotPw()">💾 Parolni yangilash va Kirish</button>
                         <button class="b b-out" style="flex:1" onclick="authMode='login';renderLogin()">⬅️ Orqaga</button>
                     </div>
                 </div>
@@ -1639,23 +1644,33 @@ function renderLogin() {
     ERR = ""; OK = "";
 }
 
-/* =========================================================
-   5. MANTIQIY FUNKSIYALAR VA KLAVIATURA NAVIGATSIYASI
-   ========================================================= */
 function login() {
-    const l = $("lg").value.trim(), p = $("pw").value.trim();
-    const u = S.users.find(x => x.login == l && x.pw == p);
-    if (!u) { ERR = "Login / PIN xato! Agar unutgan boʻlsangiz «Men parolni unutdim» tugmasini bosing."; renderLogin(); return; }
+    const l = ($("lg")?.value || "").trim().toLowerCase();
+    const p = ($("pw")?.value || "").trim();
+    const u = S.users.find(x => ((x.login || "").toLowerCase() === l || (x.name || "").toLowerCase() === l) && x.pw == p);
+    if (!u) {
+        if ($("lg")) $("lg").classList.add("input-err");
+        if ($("pw")) $("pw").classList.add("input-err");
+        ERR = "Login yoki PIN xato! Ism yoki telefon va parolni tekshirib kiriting.";
+        renderLogin();
+        return;
+    }
     finishAuth(u);
 }
 function resetForgotPw() {
     const q = ($("fgLg")?.value || "").trim().toLowerCase();
     const np = ($("fgNewPw")?.value || "").trim();
-    if (!q || !np) { ERR = "Login va yangi PIN-kodni kiriting!"; renderLogin(); return; }
+    if (!q || !np) {
+        if ($("fgLg")) $("fgLg").classList.add("input-err");
+        if ($("fgNewPw")) $("fgNewPw").classList.add("input-err");
+        ERR = "Login/Ism va yangi PIN-kodni kiriting!";
+        renderLogin();
+        return;
+    }
     const u = S.users.find(x => (x.login||"").toLowerCase() === q || (x.name||"").toLowerCase() === q);
     if (!u) { ERR = "Bunday login yoki ismli foydalanuvchi topilmadi!"; renderLogin(); return; }
     u.pw = np;
-    OK = `✅ Parol yangilandi! Login: ${u.login}`;
+    OK = `✅ Parol yangilandi!`;
     save();
     finishAuth(u);
 }
@@ -1710,7 +1725,11 @@ function saveMyProfile() {
 
 const go = t => { tab = t; render(); };
 const val = id => +($(id)?.value) || 0;
-const fail = m => { ERR = m; render(); };
+const fail = m => {
+    ERR = m;
+    render();
+    return false;
+};
 
 function uploadBuyImg(input) {
     const file = input.files && input.files[0]; if (!file) return;
@@ -1721,7 +1740,20 @@ function uploadWhImg(input) {
     const r = new FileReader(); r.onload = e => { tmpWhImg = e.target.result; }; r.readAsDataURL(file);
 }
 
-// HAR BIR TOVARNI ALOHIDA KARGO VA VALYUTA BILAN SKLADGA QABUL QILISH
+function autofillWhLot(valStr) {
+    const query = (valStr || "").toLowerCase().trim();
+    if (!query) return;
+    const found = S.lots.find(l => (l.name || "").toLowerCase().includes(query));
+    if (found) {
+        if ($("dwBc")) $("dwBc").value = found.bc || "";
+        if ($("dwCost")) $("dwCost").value = Math.round(unit(found) / curRate() * 100) / 100;
+        if ($("dwMRet")) $("dwMRet").value = found.mRet || buyPrefs.mRet;
+        if ($("dwMOpt")) $("dwMOpt").value = found.mOpt || buyPrefs.mOpt;
+        if ($("dwMBox")) $("dwMBox").value = found.mBox || buyPrefs.mBox;
+        calcDirectWhPrices();
+    }
+}
+
 function receiveSingleLotCargo(batchId, lotId) {
     const b = (S.batches || []).find(x => x.id == batchId);
     const l = L(lotId);
@@ -1772,7 +1804,6 @@ function receiveSingleLotCargo(batchId, lotId) {
     save(); render();
 }
 
-// SKLADDA MAVJUD TAYYOR TOVARNI QO'SHISH VA KATAKLARNI 0 GA TUSHIRISH
 function calcDirectWhPrices() {
     const costCur = val("dwCost");
     if (costCur <= 0) return;
@@ -1792,12 +1823,13 @@ function addDirectWhProduct() {
 
     const totPcs = (bxCnt * (perBx || 1)) + extraPcs;
     if (!nm || totPcs <= 0 || costCur <= 0) {
-        return fail("Tovar nomi, soni (karobka yoki donalik qoldiq) va kelgan narxini kiriting!");
+        if (!nm && $("dwNm")) $("dwNm").classList.add("input-err");
+        if (totPcs <= 0 && $("dwBx")) $("dwBx").classList.add("input-err");
+        if (costCur <= 0 && $("dwCost")) $("dwCost").classList.add("input-err");
+        return fail("Tovar nomi, soni (karobka yoki donalik qoldiq) va kelgan narxini to'g'ri kiriting!");
     }
 
-    const effectiveBoxes = bxCnt > 0 ? bxCnt : 0;
-    const effectivePer   = perBx > 0 ? perBx : (extraPcs > 0 ? extraPcs : 1);
-
+    const effectivePer = perBx > 0 ? perBx : (extraPcs > 0 ? extraPcs : 1);
     const rt = curRate();
     const totalBuyUZS = costCur * rt * totPcs;
     const pRetUZS = (val("dwPRet") || costCur * 1.25) * rt;
@@ -1809,7 +1841,8 @@ function addDirectWhProduct() {
         name: nm, bc: $("dwBc")?.value.trim() || "", img: tmpWhImg || "",
         supName: "Mavjud zaxira", cargoName: "-",
         kg: 0, initWh: $("dwWh")?.value || "wh1",
-        boxes: effectiveBoxes, per: effectivePer, extraPcs: bxCnt > 0 ? extraPcs : extraPcs,
+        boxes: bxCnt, per: effectivePer, extraPcs: extraPcs,
+        mRet: val("dwMRet"), mOpt: val("dwMOpt"), mBox: val("dwMBox"),
         buy: totalBuyUZS, exp: [],
         pRet: Math.round(pRetUZS), pOpt: Math.round(pOptUZS), optMin: val("dwOptMin") || 5, pBox: Math.round(pBoxUZS), promo: 0
     });
@@ -1817,7 +1850,6 @@ function addDirectWhProduct() {
     tmpWhImg = "";
     OK = `✅ «${nm}» (${totPcs} dona) Skladga saqlandi! Kataklar 0 ga tushirildi.`;
     save(); render();
-    // Saqlangandan so'ng barcha raqam kataklarini 0 ga tushiramiz
     setTimeout(() => {
         ["dwBx","dwPc","dwExtraPcs","dwCost","dwPRet","dwPOpt","dwPBox"].forEach(id => { if ($(id)) $(id).value = "0"; });
         if ($("dwNm")) { $("dwNm").value = ""; $("dwNm").focus(); }
@@ -1827,14 +1859,14 @@ function addDirectWhProduct() {
 
 function addPartner() {
     const nm = $("newSpNm").value.trim(), tp = $("newSpTp").value;
-    if (!nm) return fail(tr("newPartner"));
+    if (!nm) { if ($("newSpNm")) $("newSpNm").classList.add("input-err"); return fail(tr("newPartner")); }
     S.sups.push({ id: uid(), name: nm, type: tp, debtUZS: 0, payments: [] });
     OK = "✅ " + nm; save(); render();
 }
 function payPartnerDebtById(id) {
     const sp = (S.sups || []).find(x => x.id == id);
     const amt = val("spd_" + id);
-    if (!sp || amt <= 0) return fail(tr("amt") + "!");
+    if (!sp || amt <= 0) { if ($("spd_" + id)) $("spd_" + id).classList.add("input-err"); return fail(tr("amt") + "!"); }
     const amtUZS = amt * curRate();
     sp.debtUZS = Math.max(0, (+sp.debtUZS || 0) - amtUZS);
     if (!sp.payments) sp.payments = [];
@@ -1845,7 +1877,7 @@ function payInsidePartner(id) {
     const sp = (S.sups || []).find(x => x.id == id);
     const amt = val("inPayAmt");
     const note = $("inPayNote")?.value.trim() || "Toʻlov";
-    if (!sp || amt <= 0) return fail(tr("amt") + "!");
+    if (!sp || amt <= 0) { if ($("inPayAmt")) $("inPayAmt").classList.add("input-err"); return fail(tr("amt") + "!"); }
     const amtUZS = amt * curRate();
     sp.debtUZS = Math.max(0, (+sp.debtUZS || 0) - amtUZS);
     if (!sp.payments) sp.payments = [];
@@ -1887,7 +1919,6 @@ function setPromoLot(lotId) {
     OK = `🔥 ${l.name}: -${numPct}%`; save(); render();
 }
 
-// POS SOTUV VA SHTRIX-KOD QIDIRUVI
 let sMode = "auto", payType = "cash";
 function pickPos(id) { selLotId = id; if ($("sl")) $("sl").value = id; document.querySelectorAll(".pos-card").forEach(c => c.classList.remove("sel")); upd(); }
 function filterPos() {
@@ -1960,6 +1991,7 @@ function sellMulti() {
 
     const custObj = S.co.find(x => x.id == posSelectedCustId);
     if ((sMode === "opt" || sMode === "box") && !custObj) {
+        if ($("selCustId")) $("selCustId").classList.add("input-err");
         return fail("Optim / Karobka sotuv uchun roʻyxatdan mijozni tanlang!");
     }
 
@@ -1989,7 +2021,6 @@ function sellMulti() {
     save(); render();
 }
 
-// KAMERA SHTRIX-KOD SKANERI FUNKSIYALARI
 let html5QrScanner = null;
 function openScanner(targetInputId) {
     const m = $("scanModal");
@@ -2000,6 +2031,7 @@ function openScanner(targetInputId) {
         if (manual && $(targetInputId)) {
             $(targetInputId).value = manual;
             if (targetInputId === "posQ") scanPosBarcode(manual);
+            if (targetInputId === "dwNm") autofillWhLot(manual);
         }
         stopScanner();
         return;
@@ -2013,6 +2045,7 @@ function openScanner(targetInputId) {
                 if ($(targetInputId)) {
                     $(targetInputId).value = decodedText;
                     if (targetInputId === "posQ") scanPosBarcode(decodedText);
+                    if (targetInputId === "dwNm") autofillWhLot(decodedText);
                 }
                 stopScanner();
             },
@@ -2029,7 +2062,6 @@ function stopScanner() {
     }
 }
 
-// KATALOG VA BUYURTMALAR
 function addCart(lotId) {
     const l = L(lotId); if (!l) return;
     const q = Math.max(1, +($("cq_" + lotId)?.value) || 1);
@@ -2149,13 +2181,19 @@ function shareRef(url) {
     else { navigator.clipboard?.writeText(txt); alert("OK!"); }
 }
 function saveBrand() { S.brand.name = $("brNm").value.trim() || "Bozor hisobi"; OK = "✅"; save(); render(); }
-function saveRates() {
-    S.rate.KGS = val("rtKGS") || 145;
-    S.rate.USD = val("rtUSD") || 12600;
-    S.rate.CNY = val("rtCNY") || 1750;
-    S.rate.TJS = val("rtTJS") || 1150;
-    OK = "✅"; save(); render();
+
+function saveAllRates() {
+    const curList = ["UZS", "KGS", "USD", "CNY", "RUB", "KZT", "TJS"];
+    curList.forEach(c => {
+        if (c === S.cur) S.rate[c] = 1;
+        else {
+            const valInput = val("rt_" + c);
+            if (valInput > 0) S.rate[c] = valInput;
+        }
+    });
+    OK = "✅ Valyuta kurslari saqlandi!"; save(); render();
 }
+
 function loadDemoLots() {
     if (S.lots.length === 0) {
         const id1 = uid(), id2 = uid();
@@ -2185,9 +2223,6 @@ function toggleBot(show) {
     `;
 }
 
-/* =========================================================
-   6. GLOBAL KLAVIATURA BOSHQARUVI (STRELKALAR: O'NG/CHAP/PAST/TEPA VA ENTER)
-   ========================================================= */
 document.addEventListener("keydown", function(e) {
     const el = document.activeElement;
     if (!el || !["INPUT", "SELECT", "TEXTAREA"].includes(el.tagName)) return;
@@ -2218,7 +2253,7 @@ document.addEventListener("keydown", function(e) {
             if (inputs[idx - 1].select) inputs[idx - 1].select();
         }
     } else if (e.key === "Enter") {
-        if (el.id === "posQ") return;
+        if (el.id === "posQ" || el.id === "dwNm") return;
         e.preventDefault();
         if (idx >= 0 && idx < inputs.length - 1) {
             inputs[idx + 1].focus();
