@@ -406,10 +406,23 @@ async function loadFromSupabase() {
 }
 
 function copyStaffLink(uidStr) {
-    const link = `${location.origin}${location.pathname}?shop=${S.brand.shopId}&u=${uidStr}`;
-    navigator.clipboard?.writeText(link);
-    OK = "📲 Kirish ssilkasi nusxalandi! Xodimga Telegramdan yuboring.";
-    render();
+    const u = (S.users || []).find(x => x.id === uidStr);
+    const baseUrl = location.protocol.startsWith("http") 
+        ? (location.origin + location.pathname) 
+        : "https://ibragimchik.github.io/BOZOR-CRM/";
+    const link = `${baseUrl}?shop=${S.brand.shopId}&u=${uidStr}`;
+    const text = `Assalomu alaykum ${u ? u.name : ""}! Do'kon tizimiga kirish ssilkangiz (Login: ${u ? u.login : ""}, PIN: ${u ? u.pw : ""}):`;
+
+    // Ma'lumotlar Supabase bazaga aniq tushishi uchun saqlaymiz:
+    save();
+
+    // Telegram ulashish oynasini ochadi:
+    const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
+    window.open(tgUrl, "_blank");
+
+    // Ekranda ssilkani ham ko'rsatib beradi (qo'lda nusxa olish uchun):
+    prompt("Mana tayyor kirish ssilkasi (nusxalab oling yoki ochilgan Telegram oynasidan yuboring):", link);
+
 }async function loadFromSupabase() {
     if (!supabaseClient) return;
     try {
@@ -1503,9 +1516,11 @@ const V = {
                             return `<label style="font-size:.8rem;cursor:pointer"><input type="checkbox" ${assigned?'checked':''} onchange="toggleUserLoc('${u.id}','${l.id}',this.checked)"> ${esc(locTitle(l))}</label>`;
                         }).join("")}
                     </div>
-                < class="r">
-    <button class="b b-sm b-out" title="1-klik bilan kirish ssilkasi" onclick="copyStaffLink('${u.id}')">📲 Ssilka</button>
-    <button class="x" onclick="delStaff('${u.id}')">🗑️</button>
+                </td>
+                <td class="r">
+                    <button class="b b-sm b-out" onclick="copyStaffLink('${u.id}')">📲 Telegramga yuborish</button>
+                    <button class="x" onclick="delStaff('${u.id}')">🗑️</button>
+                </td>
             </tr>`).join("")}</table></div>
         </div>`;
     },
