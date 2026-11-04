@@ -1000,27 +1000,40 @@ const V = {
 
     trf() {
         const readyLots = S.lots.filter(l => l.status !== "transit");
+        if (!window.mvFromId || !S.locs.some(x => x.id === window.mvFromId)) {
+            window.mvFromId = S.locs[0] ? S.locs[0].id : "wh1";
+        }
+        if (!window.mvToId || !S.locs.some(x => x.id === window.mvToId) || window.mvToId === window.mvFromId) {
+            const secondLoc = S.locs.find(x => x.id !== window.mvFromId) || S.locs[0];
+            window.mvToId = secondLoc ? secondLoc.id : "mk1";
+        }
+
+        // Tanlangan "Qayerdan" (Sklad yoki Do'kon) nuqtasida faqat 0 dan ko'p (> 0) bo'lgan tovarlarni ajratib olamiz:
+        const availLots = readyLots.filter(l => inLoc(l, window.mvFromId) > 0);
+
         return `<div class="c"><h3>${tr("mvTitle")}</h3>
         ${readyLots.length ? `
             <div class="row">
                 <label>${tr("fromLoc")}
-                    <select id="mvFrom">
-                        ${S.locs.map(loc=>`<option value="${loc.id}">${loc.type==='wh'?'🏭':'🏪'} ${esc(locTitle(loc))}</option>`).join("")}
+                    <select id="mvFrom" onchange="window.mvFromId=this.value; if(window.mvToId===this.value){const alt=S.locs.find(x=>x.id!==this.value); if(alt) window.mvToId=alt.id;} render()">
+                        ${S.locs.map(loc=>`<option value="${loc.id}" ${loc.id===window.mvFromId?'selected':''}>${loc.type==='wh'?'🏭':'🏪'} ${esc(locTitle(loc))}</option>`).join("")}
                     </select>
                 </label>
                 <label>${tr("toLoc")}
-                    <select id="mvTo">
-                        ${S.locs.map((loc,i)=>`<option value="${loc.id}" ${i===1?'selected':''}>${loc.type==='wh'?'🏭':'🏪'} ${esc(locTitle(loc))}</option>`).join("")}
+                    <select id="mvTo" onchange="window.mvToId=this.value">
+                        ${S.locs.map(loc=>`<option value="${loc.id}" ${loc.id===window.mvToId?'selected':''}>${loc.type==='wh'?'🏭':'🏪'} ${esc(locTitle(loc))}</option>`).join("")}
                     </select>
                 </label>
             </div>
-            <label>${tr("selProd")}
-                <select id="tl">
-                    ${readyLots.map(l=>`<option value="${l.id}">${esc(l.name)} (${tr("inWhCol")}: ${bx(l,inWh(l))} | ${tr("inMkCol")}: ${bx(l,inMk(l))})</option>`).join("")}
-                </select>
-            </label>
-            <div class="row">${num("tb",tr("box"))}${num("tp",tr("pcs"))}</div>
-            <button class="b" onclick="moveBetweenLocs()">${tr("confirmMv")}</button>
+            ${availLots.length ? `
+                <label>${tr("selProd")} <span class="badge badge-ok">${availLots.length} xil mavjud</span>
+                    <select id="tl">
+                        ${availLots.map(l=>`<option value="${l.id}">${esc(l.name)} (${tr("inWhCol")}: ${bx(l,inWh(l))} | ${tr("inMkCol")}: ${bx(l,inMk(l))})</option>`).join("")}
+                    </select>
+                </label>
+                <div class="row">${num("tb",tr("box"))}${num("tp",tr("pcs"))}</div>
+                <button class="b" onclick="moveBetweenLocs()">${tr("confirmMv")}</button>
+            ` : `<p class="mu" style="padding:10px;background:#0b1120;border-radius:8px;border:1px dashed var(--ln)">⚠️ Tanlangan nuqtada oʻtkazish uchun tovar qolmagan (barchasi 0 dona).</p>`}
         ` : `<p class="mu">${tr("noProd")}</p>`}
         </div>` +
 
@@ -1033,7 +1046,6 @@ const V = {
             return `<tr><td><b>${esc(l?l.name:"-")}</b></td><td><span class="badge">${esc(fn)} ➔ ${esc(tn)}</span></td><td>${l?bx(l,m.q):m.q}</td><td class="r mu">${tm(m.t)}</td></tr>`;
         }).join("")}</table></div></div>` : "");
     },
-
     wh() {
         const whs = S.locs.filter(x => x.type === "wh");
         const readyLots = S.lots.filter(l => l.status !== "transit");
