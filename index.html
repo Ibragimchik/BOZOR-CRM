@@ -523,11 +523,17 @@ const sold = (l, locId) => sum(S.sales.filter(s => s.lot == l.id && (!locId || s
 
 const inLoc = (l, locId) => {
     if (l.status === "transit") return 0;
-    const startWh = l.initWh || "wh1";
+    const whs = S.locs.filter(x => x.type === "wh");
+    let startWh = l.initWh || (whs[0] ? whs[0].id : "wh1");
+    // Agar eski sklad ("wh1") o'chirilgan bo'lsa, avtomatik birinchi mavjud skladga (masalan: KARA-SUU INTERNAT) biriktiradi:
+    if (!S.locs.some(x => x.id === startWh) && whs.length > 0) {
+        startWh = whs[0].id;
+        l.initWh = startWh;
+    }
     let q = (locId === startWh) ? tot(l) : 0;
     S.moves.forEach(m => {
         if (m.lot != l.id) return;
-        const fromId = m.from || "wh1";
+        const fromId = m.from || startWh;
         const toId   = m.to || "mk1";
         if (fromId === locId) q -= (+m.q || 0);
         if (toId === locId)   q += (+m.q || 0);
@@ -1875,47 +1881,30 @@ function uploadWhImg(input) {
 function autofillWhLot(valStr) {
     const query = (valStr || "").toLowerCase().trim();
     if (!query) return;
-    const found = S.lots.find(l => (l.name || "").toLowerCase().includes(query));
+    const found = S.lots.find(l => (l.name || "").toLowerCase() === query) || S.lots.find(l => (l.name || "").toLowerCase().includes(query));
     if (found) {
+        const rt = curRate();
         if ($("dwBc")) $("dwBc").value = found.bc || "";
-        if ($("dwCost")) $("dwCost").value = Math.round(unit(found) / curRate() * 100) / 100;
-        if ($("dwMRet")) $("dwMRet").value = found.mRet || buyPrefs.mRet;
-        if ($("dwMOpt")) $("dwMOpt").value = found.mOpt || buyPrefs.mOpt;
-        if ($("dwMBox")) $("dwMBox").value = found.mBox || buyPrefs.mBox;
+        if ($("dwWh") && found.initWh && S.locs.some(x => x.id === found.initWh)) {
+            $("dwWh").value = found.initWh;
+        }
+        if ($("dwPc") && (+$("dwPc").value === 0) && found.per > 0) {
+            $("dwPc").value = found.per;
+        }
+        if ($("dwCost")) $("dwCost").value = Math.round((unit(found) / rt) * 100) / 100;
         
-        // Eski belgilangan aniq sotish narxlarini qat'iy o'rnatamiz va bloklaymiz:
-        if ($("dwPRet")) {
-            $("dwPRet").value = found.pRet || "";
-            $("dwPRet").dataset.locked = "true"; // Boshqa funksiyalar o'zgartirmasligi uchun belgi
-        }
-        if ($("dwPOpt")) {
-            $("dwPOpt").value = found.pOpt || "";
-            $("dwPOpt").dataset.locked = "true";
-        }
-        if ($("dwPBox")) {
-            $("dwPBox").value = found.pBox || "";
-            $("dwPBox").dataset.locked = "true";
-        }
-        if ($("dwOptMin")) $("dwOptMin").value = found.optMin || buyPrefs.om;
-    }
-}function autofillWhLot(valStr) {
-    const query = (valStr || "").toLowerCase().trim();
-    if (!query) return; 
-    const found = S.lots.find(l => (l.name || "").toLowerCase().includes(query));
-        if ($("dwBc")) $("dwBc").value = found.bc || "";
-        if ($("dwCost")) $("dwCost").value = Math.round(unit(found) / curRate() * 100) / 100;
-        
-        // Foiz kataklarini bo'sh qoldiramiz, shunda avtomatik hisoblab narxni buzib qo'ymaydi:
+        // Foiz kataklarini bo'sh qoldiramiz — foydalanuvchi o'zi foiz yozmaguncha eski narxlar o'zgarmaydi:
         if ($("dwMRet")) $("dwMRet").value = "";
         if ($("dwMOpt")) $("dwMOpt").value = "";
         if ($("dwMBox")) $("dwMBox").value = "";
         
-        // Eski belgilangan aniq sotish narxlarini to'g'ridan-to'g'ri joyiga qo'yamiz:
-        if ($("dwPRet")) $("dwPRet").value = found.pRet || "";
-        if ($("dwPOpt")) $("dwPOpt").value = found.pOpt || "";
-        if ($("dwPBox")) $("dwPBox").value = found.pBox || "";
+        // Bazadagi eski belgilangan sotish narxlarini aniq o'z holida chiqaramiz:
+        if ($("dwPRet")) $("dwPRet").value = found.pRet ? Math.round((found.pRet / rt) * 100) / 100 : "";
+        if ($("dwPOpt")) $("dwPOpt").value = found.pOpt ? Math.round((found.pOpt / rt) * 100) / 100 : "";
+        if ($("dwPBox")) $("dwPBox").value = found.pBox ? Math.round((found.pBox / rt) * 100) / 100 : "";
         if ($("dwOptMin")) $("dwOptMin").value = found.optMin || buyPrefs.om;
     }
+}
 
 function receiveSingleLotCargo(batchId, lotId) {
     const b = (S.batches || []).find(x => x.id == batchId);
@@ -1923,7 +1912,8 @@ function receiveSingleLotCargo(batchId, lotId) {
     if (!l) return;
 
     const cgId = $("lCg_" + lotId)?.value;
-    const whId = $("lWh_" + lotId)?.value || "wh1";
+    const whs = S.locs.filter(x => x.type === "wh");
+    const whId = $("lWh_" + lotId)?.value || (whs[0] ? whs[0].id : "wh1");
     const kg = val("lKg_" + lotId);
     const cCur = $("lCur_" + lotId)?.value || buyPrefs.cargoCur || "USD";
     buyPrefs.cargoCur = cCur;
@@ -1971,10 +1961,22 @@ function calcDirectWhPrices() {
     const costCur = val("dwCost");
     if (costCur <= 0) return;
     const perBx = Math.max(1, val("dwPc") || 1);
-    const mR = val("dwMRet"), mO = val("dwMOpt"), mB = val("dwMBox");
-    if ($("dwPRet")) $("dwPRet").value = Math.round(costCur * (1 + mR / 100) * 100) / 100;
-    if ($("dwPOpt")) $("dwPOpt").value = Math.round(costCur * (1 + mO / 100) * 100) / 100;
-    if ($("dwPBox")) $("dwPBox").value = Math.round(costCur * perBx * (1 + mB / 100) * 100) / 100;
+    
+    const mRStr = ($("dwMRet")?.value || "").trim();
+    const mOStr = ($("dwMOpt")?.value || "").trim();
+    const mBStr = ($("dwMBox")?.value || "").trim();
+
+    // MUHIM: Faqat foiz katagida raqam yozilgan bo'lsagina narxni hisoblaydi. 
+    // Katak bo'sh tursa, eski narxlarga umuman tegmaydi!
+    if (mRStr !== "" && $("dwPRet")) {
+        $("dwPRet").value = Math.round(costCur * (1 + (+mRStr) / 100) * 100) / 100;
+    }
+    if (mOStr !== "" && $("dwPOpt")) {
+        $("dwPOpt").value = Math.round(costCur * (1 + (+mOStr) / 100) * 100) / 100;
+    }
+    if (mBStr !== "" && $("dwPBox")) {
+        $("dwPBox").value = Math.round(costCur * perBx * (1 + (+mBStr) / 100) * 100) / 100;
+    }
 }
 
 function saveDirectWhProduct(existingLotId) {
@@ -1983,6 +1985,8 @@ function saveDirectWhProduct(existingLotId) {
     const perBx = val("dwPc");
     const extraPcs = val("dwExtraPcs");
     const costCur = val("dwCost");
+    const whs = S.locs.filter(x => x.type === "wh");
+    const selectedWh = $("dwWh")?.value || (whs[0] ? whs[0].id : "wh1");
 
     const totPcs = (bxCnt * (perBx || 1)) + extraPcs;
     if (!nm || totPcs <= 0 || costCur <= 0) {
@@ -1995,9 +1999,14 @@ function saveDirectWhProduct(existingLotId) {
     const effectivePer = perBx > 0 ? perBx : (extraPcs > 0 ? extraPcs : 1);
     const rt = curRate();
     const totalBuyUZS = costCur * rt * totPcs;
-    const pRetUZS = (val("dwPRet") || costCur * 1.25) * rt;
-    const pOptUZS = (val("dwPOpt") || costCur * 1.15) * rt;
-    const pBoxUZS = (val("dwPBox") || costCur * effectivePer * 1.1) * rt;
+    
+    const rawPRet = val("dwPRet");
+    const rawPOpt = val("dwPOpt");
+    const rawPBox = val("dwPBox");
+
+    const pRetUZS = (rawPRet > 0 ? rawPRet : costCur * 1.25) * rt;
+    const pOptUZS = (rawPOpt > 0 ? rawPOpt : costCur * 1.15) * rt;
+    const pBoxUZS = (rawPBox > 0 ? rawPBox : costCur * effectivePer * 1.1) * rt;
 
     if (existingLotId) {
         const l = L(existingLotId);
@@ -2005,6 +2014,7 @@ function saveDirectWhProduct(existingLotId) {
             l.name = nm;
             l.bc = $("dwBc")?.value.trim() || l.bc;
             if (tmpWhImg) l.img = tmpWhImg;
+            l.initWh = selectedWh;
             l.boxes = bxCnt;
             l.per = effectivePer;
             l.extraPcs = extraPcs;
@@ -2020,16 +2030,34 @@ function saveDirectWhProduct(existingLotId) {
         const cleanName = nm.toLowerCase();
         const existing = S.lots.find(x => x.status !== "transit" && (x.name || "").toLowerCase() === cleanName);
         if (existing) {
-            existing.boxes = (+existing.boxes || 0) + bxCnt;
-            existing.extraPcs = (+existing.extraPcs || 0) + extraPcs;
-            existing.buy += totalBuyUZS;
-            OK = `✅ «${nm}» mavjud tovar ustiga qo'shildi (${totPcs} dona)!`;
+            // Mavjud tovar ustiga qo'shilganda karobka va donalarni to'g'ri hisoblab qo'shadi:
+            const oldTotPcs = tot(existing);
+            const newPer = perBx > 0 ? perBx : (existing.per || 1);
+            const combinedPcs = oldTotPcs + totPcs;
+            
+            existing.per = newPer;
+            existing.boxes = Math.floor(combinedPcs / newPer);
+            existing.extraPcs = combinedPcs % newPer;
+            existing.buy = (+existing.buy || 0) + totalBuyUZS;
+            
+            // Agar eski skladi o'chib ketgan bo'lsa, hozir tanlangan skladga o'tkazadi:
+            if (!S.locs.some(x => x.id === existing.initWh)) {
+                existing.initWh = selectedWh;
+            }
+            
+            // Foydalanuvchi narxlarni o'zgartirgan bo'lsa yoki o'z holida qoldirgan bo'lsa saqlaydi:
+            if (rawPRet > 0) existing.pRet = Math.round(pRetUZS);
+            if (rawPOpt > 0) existing.pOpt = Math.round(pOptUZS);
+            if (rawPBox > 0) existing.pBox = Math.round(pBoxUZS);
+            if (val("dwOptMin") > 0) existing.optMin = val("dwOptMin");
+
+            OK = `✅ «${nm}» mavjud tovar ustiga qo'shildi (+${totPcs} dona, jami: ${combinedPcs} dona)!`;
         } else {
             S.lots.push({
                 id: uid(), status: "ready",
                 name: nm, bc: $("dwBc")?.value.trim() || "", img: tmpWhImg || "",
                 supName: "Mavjud zaxira", cargoName: "-",
-                kg: 0, initWh: $("dwWh")?.value || "wh1",
+                kg: 0, initWh: selectedWh,
                 boxes: bxCnt, per: effectivePer, extraPcs: extraPcs,
                 mRet: val("dwMRet"), mOpt: val("dwMOpt"), mBox: val("dwMBox"),
                 buy: totalBuyUZS, exp: [],
