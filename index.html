@@ -590,8 +590,8 @@ const getTabs = () => {
 };
 
 function pr(l, q, mode) {
-    if (mode === "box" || (l.pBox && q >= l.per && mode !== "ret" && mode !== "opt")) return { p: l.pBox ? Math.round(l.pBox / Math.max(1, l.per)) : l.pRet, t: tr("prBox") };
-    if (mode === "opt" || (l.pOpt && q >= (l.optMin || 5) && mode !== "ret")) return { p: l.pOpt, t: tr("prOpt") };
+    if (mode === "box" || (l.pBox && q >= (l.per || 1) && mode !== "ret" && mode !== "opt")) return { p: l.pBox || l.pOpt || l.pRet, t: tr("prBox") };
+    if (mode === "opt" || (l.pOpt && q >= (l.optMin || 3) && mode !== "ret")) return { p: l.pOpt, t: tr("prOpt") };
     return { p: l.pRet, t: tr("prRet") };
 }
 
@@ -1039,13 +1039,44 @@ const V = {
         const readyLots = S.lots.filter(l => l.status !== "transit");
         const isBoss = (role === "boss");
         
+        if (!window.whSortBy) window.whSortBy = "sum_desc";
+        if (window.whSearchQ === undefined) window.whSearchQ = "";
+
         const totalOptSum = readyLots.reduce((acc, l) => {
             const q = tot(l);
             const optP = l.pOpt || l.pRet || 0;
             return acc + (q * optP);
         }, 0);
 
+        // Qidiruv va Sortirovka (Saralash) mantiqi:
+        const qStr = (window.whSearchQ || "").toLowerCase().trim();
+        const filteredLots = readyLots.filter(l => {
+            if (!qStr) return true;
+            return (l.name || "").toLowerCase().includes(qStr) || (l.bc || "").toLowerCase().includes(qStr);
+        });
+
+        const sortedLots = filteredLots.slice().sort((a, b) => {
+            const sumA = tot(a) * (a.pOpt || a.pRet || 0);
+            const sumB = tot(b) * (b.pOpt || b.pRet || 0);
+            const stA = getStars(a), stB = getStars(b);
+            const qA = tot(a), qB = tot(b);
+            const nmA = (a.name || "").toLowerCase(), nmB = (b.name || "").toLowerCase();
+
+            switch (window.whSortBy) {
+                case "name_asc":   return nmA.localeCompare(nmB);
+                case "name_desc":  return nmB.localeCompare(nmA);
+                case "sum_desc":   return sumB - sumA;
+                case "sum_asc":    return sumA - sumB;
+                case "stars_desc": return (stB - stA) || (sold(b, null) - sold(a, null));
+                case "stars_asc":  return (stA - stB) || (sold(a, null) - sold(b, null));
+                case "qty_desc":   return qB - qA;
+                case "qty_asc":    return qA - qB;
+                default:           return 0;
+            }
+        });
+
         let editLotObj = editingLotId ? L(editingLotId) : null;
+        const rt = curRate();
 
         return `<div class="c">
             <h3>
@@ -1076,20 +1107,20 @@ const V = {
                     </div>
                     <div class="row">
                         <label>${tr("prodImg")}<input id="dwImgIn" type="file" accept="image/*" onchange="uploadWhImg(this)"></label>
-                        ${num("dwBx", tr("boxCnt"), "", editLotObj ? editLotObj.boxes : "0", "calcDirectWhPrices()")}
-                        ${num("dwPc", tr("perBox"), "", editLotObj ? editLotObj.per : "0", "calcDirectWhPrices()")}
-                        ${num("dwExtraPcs", "Donalik qoldiq (dona)", "", editLotObj ? (editLotObj.extraPcs||0) : "0", "calcDirectWhPrices()")}
+                        ${num("dwBx", tr("boxCnt"), "", editLotObj ? editLotObj.boxes : "0")}
+                        ${num("dwPc", tr("perBox"), "", editLotObj ? editLotObj.per : "0")}
+                        ${num("dwExtraPcs", "Donalik qoldiq (dona)", "", editLotObj ? (editLotObj.extraPcs||0) : "0")}
                     </div>
                     <div class="row">
-                        ${num("dwCost", `1 dona kelgan narxi — Tannarx (${S.cur})`, "0", editLotObj ? Math.round(unit(editLotObj)/curRate()*100)/100 : "0", "calcDirectWhPrices()")}
-                        ${num("dwMRet", tr("mrgRet"), "", editLotObj ? editLotObj.mRet : buyPrefs.mRet, "calcDirectWhPrices()")}
-                        ${num("dwMOpt", tr("mrgOpt"), "", editLotObj ? editLotObj.mOpt : buyPrefs.mOpt, "calcDirectWhPrices()")}
-                        ${num("dwMBox", tr("mrgBox"), "", editLotObj ? editLotObj.mBox : buyPrefs.mBox, "calcDirectWhPrices()")}
+                        ${num("dwCost", `1 dona kelgan narxi — Tannarx (${S.cur})`, "0", editLotObj ? Math.round(unit(editLotObj)/rt*100)/100 : "0", "calcDirectWhPrices()")}
+                        ${num("dwMRet", tr("mrgRet"), "", editLotObj ? (editLotObj.mRet||"") : "", "calcDirectWhPrices()")}
+                        ${num("dwMOpt", tr("mrgOpt"), "", editLotObj ? (editLotObj.mOpt||"") : "", "calcDirectWhPrices()")}
+                        ${num("dwMBox", tr("mrgBox"), "", editLotObj ? (editLotObj.mBox||"") : "", "calcDirectWhPrices()")}
                     </div>
                     <div class="row">
-                        ${num("dwPRet", `Dona sotish narxi (${S.cur})`, "0", editLotObj ? editLotObj.pRet : "0")}
-                        ${num("dwPOpt", `Optim sotish narxi (${S.cur})`, "0", editLotObj ? editLotObj.pOpt : "0")}
-                        ${num("dwPBox", `1 Karobka sotish narxi (${S.cur})`, "0", editLotObj ? editLotObj.pBox : "0")}
+                        ${num("dwPRet", `Dona sotish narxi (${S.cur})`, "0", editLotObj ? Math.round((editLotObj.pRet||0)/rt*100)/100 : "0")}
+                        ${num("dwPOpt", `Optim sotish narxi (${S.cur})`, "0", editLotObj ? Math.round((editLotObj.pOpt||0)/rt*100)/100 : "0")}
+                        ${num("dwPBox", `Karobka narxi (1 dona, ${S.cur})`, "0", editLotObj ? Math.round((editLotObj.pBox||0)/rt*100)/100 : "0")}
                         ${num("dwOptMin", tr("optMin"), "", editLotObj ? editLotObj.optMin : buyPrefs.om)}
                     </div>
                     <div class="row" style="margin-top:8px">
@@ -1104,20 +1135,38 @@ const V = {
             <h3>
                 <span>${tr("whTitle")}</span>
                 <span class="badge badge-ok">Jami Optim Summa: ${f(totalOptSum)} ${S.cur}</span>
-            </h3>` + 
-        (readyLots.length ? `<div class="tw"><table>
+            </h3>
+
+            <div class="row" style="margin:10px 0 12px; background:#0b1120; padding:10px; border-radius:10px; border:1px solid var(--ln)">
+                <label style="flex:1.5; margin:0">🔍 Tovar qidirish (Nomi yoki Shtrix-kod)
+                    <input id="whSearchInp" placeholder="Masalan: Molten..." value="${esc(window.whSearchQ)}" oninput="window.whSearchQ=this.value; render(); const el=$('whSearchInp'); if(el){el.focus(); el.setSelectionRange(el.value.length, el.value.length);}">
+                </label>
+                <label style="flex:1.5; margin:0">⚡ Saralash (Sortirovka)
+                    <select onchange="window.whSortBy=this.value; render()">
+                        <option value="sum_desc" ${window.whSortBy==='sum_desc'?'selected':''}>💰 Jami Summa: Katta ➔ Kichik</option>
+                        <option value="sum_asc" ${window.whSortBy==='sum_asc'?'selected':''}>💰 Jami Summa: Kichik ➔ Katta</option>
+                        <option value="name_asc" ${window.whSortBy==='name_asc'?'selected':''}>🔤 Nomi boʻyicha: A ➔ Z</option>
+                        <option value="name_desc" ${window.whSortBy==='name_desc'?'selected':''}>🔤 Nomi boʻyicha: Z ➔ A</option>
+                        <option value="stars_desc" ${window.whSortBy==='stars_desc'?'selected':''}>⭐ Reyting: Koʻp sotilgan (Xit) ➔ Sust</option>
+                        <option value="stars_asc" ${window.whSortBy==='stars_asc'?'selected':''}>⭐ Reyting: Sust (☆ 0) ➔ Koʻp sotilgan</option>
+                        <option value="qty_desc" ${window.whSortBy==='qty_desc'?'selected':''}>📦 Qoldiq soni: Koʻp ➔ Kam</option>
+                        <option value="qty_asc" ${window.whSortBy==='qty_asc'?'selected':''}>📦 Qoldiq soni: Kam ➔ Koʻp</option>
+                    </select>
+                </label>
+            </div>` + 
+        (sortedLots.length ? `<div class="tw"><table>
             <tr>
-                <th>${tr("prodName")}</th>
+                <th style="cursor:pointer;color:var(--ac)" onclick="window.whSortBy=(window.whSortBy==='name_asc'?'name_desc':'name_asc');render()">${tr("prodName")} ⇅</th>
                 ${isBoss ? `<th>${tr("costBase")}</th>` : ""}
-                <th>Sotish (Dona / Optim)</th>
-                <th>${tr("inWhCol")}</th>
+                <th>Sotish (Dona / Optim / Kar.)</th>
+                <th style="cursor:pointer;color:var(--ac)" onclick="window.whSortBy=(window.whSortBy==='qty_desc'?'qty_asc':'qty_desc');render()">${tr("inWhCol")} ⇅</th>
                 <th>${tr("inMkCol")}</th>
                 <th>${tr("soldCol")}</th>
-                <th>${tr("totSumCol")}</th>
-                <th>${tr("ratingCol")}</th>
+                <th style="cursor:pointer;color:var(--ac)" onclick="window.whSortBy=(window.whSortBy==='sum_desc'?'sum_asc':'sum_desc');render()">${tr("totSumCol")} ⇅</th>
+                <th style="cursor:pointer;color:var(--ac)" onclick="window.whSortBy=(window.whSortBy==='stars_desc'?'stars_asc':'stars_desc');render()">${tr("ratingCol")} ⇅</th>
                 <th class="r">${tr("promoCol")}</th>
             </tr>
-            ${readyLots.map(l => {
+            ${sortedLots.map(l => {
                 const stars = getStars(l);
                 const starHtml = stars > 0 ? "⭐".repeat(stars) : `<span class="badge badge-bad">☆ 0 (Sust)</span>`;
                 const itemTotalSum = tot(l) * (l.pOpt || l.pRet || 0);
@@ -1127,7 +1176,7 @@ const V = {
                         <b>${esc(l.name)}</b> ${l.bc?`<span class="badge">#${esc(l.bc)}</span>`:""} ${l.promo?`<span class="badge badge-tp">${tr("promoActive")} -${l.promo}%</span>`:""}
                     </td>
                     ${isBoss ? `<td><b>${f(unit(l))}</b> <small>${S.cur}</small></td>` : ""}
-                    <td><b>${f(l.pRet)}</b> / <span class="mu">${f(l.pOpt)} ${S.cur}</span></td>
+                    <td><b>${f(l.pRet)}</b> / <span class="mu">${f(l.pOpt)}</span> / <span class="badge">${f(l.pBox||l.pOpt)} ${S.cur}</span></td>
                     <td>${bx(l,inWh(l, activeLoc==="all"?null:activeLoc))}</td>
                     <td>${bx(l,inMk(l, activeLoc==="all"?null:activeLoc))}</td>
                     <td><b>${sold(l, null)} ${tr("pcs")}</b></td>
@@ -1142,7 +1191,6 @@ const V = {
             }).join("")}
         </table></div>` : `<p class="mu">${tr("noProd")}</p>`) + `</div>`;
     },
-
     mk() {
         const curShop = (role === "sel" && USER?.loc && USER.loc !== "all") ? USER.loc : (activeLoc !== "all" ? activeLoc : null);
         const av = S.lots.filter(l => inMk(l, curShop) > 0);
@@ -1866,7 +1914,29 @@ const go = t => { tab = t; render(); };
 const val = id => +($(id)?.value) || 0;
 const fail = m => {
     ERR = m;
-    render();
+    // Sahifani qaytadan render() qilib yozuvlarni o'chirib yubormaymiz!
+    // Faqat tepaga qizil xato xabarini chiqaramiz va miltillayotgan katakka fokus qaratamiz:
+    let errEl = document.querySelector(".wrap > .err");
+    if (!errEl) {
+        const navEl = document.querySelector(".wrap > nav");
+        if (navEl) {
+            errEl = document.createElement("div");
+            errEl.className = "err";
+            navEl.insertAdjacentElement("afterend", errEl);
+        }
+    }
+    if (errEl) {
+        errEl.textContent = m;
+        errEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    } else {
+        alert(m);
+    }
+    ERR = "";
+    const firstErrInput = document.querySelector(".input-err");
+    if (firstErrInput) {
+        firstErrInput.focus();
+        firstErrInput.addEventListener("input", () => firstErrInput.classList.remove("input-err"), { once: true });
+    }
     return false;
 };
 
@@ -1957,18 +2027,14 @@ function receiveSingleLotCargo(batchId, lotId) {
     OK = `✅ «${l.name}» (${l.cargoName}) Skladga qabul qilindi!`;
     save(); render();
 }
-
 function calcDirectWhPrices() {
     const costCur = val("dwCost");
     if (costCur <= 0) return;
-    const perBx = Math.max(1, val("dwPc") || 1);
     
     const mRStr = ($("dwMRet")?.value || "").trim();
     const mOStr = ($("dwMOpt")?.value || "").trim();
     const mBStr = ($("dwMBox")?.value || "").trim();
 
-    // MUHIM: Faqat foiz katagida raqam yozilgan bo'lsagina narxni hisoblaydi. 
-    // Katak bo'sh tursa, eski narxlarga umuman tegmaydi!
     if (mRStr !== "" && $("dwPRet")) {
         $("dwPRet").value = Math.round(costCur * (1 + (+mRStr) / 100) * 100) / 100;
     }
@@ -1976,7 +2042,8 @@ function calcDirectWhPrices() {
         $("dwPOpt").value = Math.round(costCur * (1 + (+mOStr) / 100) * 100) / 100;
     }
     if (mBStr !== "" && $("dwPBox")) {
-        $("dwPBox").value = Math.round(costCur * perBx * (1 + (+mBStr) / 100) * 100) / 100;
+        // 1 dona uchun karobka narxi:
+        $("dwPBox").value = Math.round(costCur * (1 + (+mBStr) / 100) * 100) / 100;
     }
 }
 
@@ -1990,13 +2057,16 @@ function saveDirectWhProduct(existingLotId) {
     const selectedWh = $("dwWh")?.value || (whs[0] ? whs[0].id : "wh1");
 
     const totPcs = (bxCnt * (perBx || 1)) + extraPcs;
+document.querySelectorAll(".input-err").forEach(el => el.classList.remove("input-err"));
     if (!nm || totPcs <= 0 || costCur <= 0) {
         if (!nm && $("dwNm")) $("dwNm").classList.add("input-err");
-        if (totPcs <= 0 && $("dwBx")) $("dwBx").classList.add("input-err");
+        if (totPcs <= 0) {
+            if ($("dwBx")) $("dwBx").classList.add("input-err");
+            if ($("dwExtraPcs")) $("dwExtraPcs").classList.add("input-err");
+        }
         if (costCur <= 0 && $("dwCost")) $("dwCost").classList.add("input-err");
-        return fail("Tovar nomi, soni va kelgan narxini to'g'ri kiriting!");
+        return fail("Diqqat! Qizil miltillayotgan kataklarni to'ldiring (Karobka soni yoki Donalik qoldiq kamida 1 bo'lishi kerak)!");
     }
-
     const effectivePer = perBx > 0 ? perBx : (extraPcs > 0 ? extraPcs : 1);
     const rt = curRate();
     const totalBuyUZS = costCur * rt * totPcs;
@@ -2161,11 +2231,13 @@ function scanPosBarcode(code) {
         filterPos();
     }
 }
+
 function setSMode(m, btn) {
     sMode = m;
     document.querySelectorAll("#sModeSeg button").forEach(b => b.classList.remove("on"));
     btn.classList.add("on");
-    if (m === "box" && (!val("sb") || val("sb") === 0)) { $("sb").value = 1; $("sp").value = 0; }
+    // "Karobka narx" yoki "Optim narx" bosilganda karobka sonini majburlab 1 qilib qo'ymaydi, 
+    // sotuvchi necha dona (masalan 25 dona yoki 40 dona) yozsa, o'shani karobka narxida hisoblayveradi:
     if ($("custBoxPos")) $("custBoxPos").style.display = (sMode === "opt" || sMode === "box" || payType === "debt") ? "block" : "none";
     upd();
 }
@@ -2176,52 +2248,77 @@ function setPayType(pt, btn) {
     if ($("mixBox")) $("mixBox").style.display = pt === "mix" ? "flex" : "none";
     if ($("custBoxPos")) $("custBoxPos").style.display = (sMode === "opt" || sMode === "box" || payType === "debt") ? "block" : "none";
 }
-const qty = () => { const l = L($("sl")?.value); return l ? [l, val("sb") * l.per + val("sp")] : [null, 0]; };
+const qty = () => { const l = L($("sl")?.value); return l ? [l, val("sb") * (l.per || 1) + val("sp")] : [null, 0]; };
 function upd() {
     if (!$("sl")) return;
     const [l, q] = qty(); if (!l) return;
     const p = pr(l, q || 1, sMode);
-    $("spr").value = n(p.p); $("tier").textContent = p.t; tot2();
+    $("spr").value = f(p.p).replace(/\s/g, ""); 
+    $("tier").textContent = p.t; 
+    tot2();
 }
 function tot2() {
     if (!$("sl")) return;
     const [l, q] = qty(); if (!l) return;
     const finalTot = Math.max(0, (q * val("spr")) - val("sdisc"));
-    if ($("stot")) $("stot").innerHTML = `${q} ${tr("pcs")} = ${f(finalTot)} <small>${S.cur}</small>`;
+    if ($("stot")) $("stot").innerHTML = `${q} ${tr("pcs")} = ${finalTot} <small>${S.cur}</small>`;
 }
 
 function posAddToCart() {
     if ($("selCustId")) posSelectedCustId = $("selCustId").value;
-    const [l, q] = qty(); const p = val("spr"), disc = val("sdisc");
+    const [l, q] = qty(); 
+    const rt = curRate();
+    const p = val("spr") * rt; 
+    const disc = val("sdisc") * rt;
     if (!l || q <= 0 || p <= 0) return fail(tr("pcs") + "!");
-    const curShop = (role === "sel" && USER?.loc && USER.loc !== "all") ? USER.loc : (activeLoc !== "all" ? activeLoc : "mk1");
-    const rem = inMk(l, curShop==="all"?null:curShop);
+    
+    // Do'konni to'g'ri aniqlash (eski "mk1" o'chib ketgan bo'lsa ham, mavjud do'kondan oladi):
+    const mks = S.locs.filter(x => x.type === "mk");
+    const curShop = (role === "sel" && USER?.loc && USER.loc !== "all") ? USER.loc : (activeLoc !== "all" ? activeLoc : null);
+    const rem = inMk(l, curShop);
     const alreadyInCart = posCart.reduce((a, c) => c.lot == l.id ? a + c.q : a, 0);
-    if (q + alreadyInCart > rem) return fail(tr("inMkCol") + " < " + (q + alreadyInCart));
+    if (q + alreadyInCart > rem) return fail(`${tr("inMkCol")} yetarli emas! Bor: ${rem} dona`);
+
+    // Tovar aynan qaysi do'konda turganini topamiz:
+    let targetLoc = curShop;
+    if (!targetLoc) {
+        const foundMk = mks.find(m => inLoc(l, m.id) >= (q + alreadyInCart)) || mks[0];
+        targetLoc = foundMk ? foundMk.id : "mk1";
+    }
 
     const finalTot = Math.max(0, q * p - disc);
-    posCart.push({ lot: l.id, name: l.name, q, p, disc, tot: finalTot });
-    OK = "➕ " + l.name; render();
+    posCart.push({ lot: l.id, name: l.name, q, p, disc, tot: finalTot, loc: targetLoc });
+    OK = "➕ " + l.name + ` (${q} dona)`; 
+    render();
 }
 
 function sellMulti() {
-    if (!posCart.length) return fail("Chek bo'sh!");
+    // Agar foydalanuvchi "+ Ro'yxatga qo'shish" ni bosmasdan, to'g'ri "Sotuvni yakunlash" ni bossa ham, 
+    // tanlangan tovarni avtomatik ro'yxatga qo'shib sotib yuboradi!
+    if (!posCart.length) {
+        const [l, q] = qty();
+        if (l && q > 0 && val("spr") > 0) {
+            posAddToCart();
+            if (!posCart.length) return;
+        } else {
+            return fail("Chek bo'sh! Avval tovarni ro'yxatga qo'shing.");
+        }
+    }
     if ($("selCustId")) posSelectedCustId = $("selCustId").value;
-    const curShop = (role === "sel" && USER?.loc && USER.loc !== "all") ? USER.loc : (activeLoc !== "all" ? activeLoc : "mk1");
+    const mks = S.locs.filter(x => x.type === "mk");
+    const defaultShop = (role === "sel" && USER?.loc && USER.loc !== "all") ? USER.loc : (activeLoc !== "all" ? activeLoc : (mks[0] ? mks[0].id : "mk1"));
     const grandTot = posCart.reduce((a, c) => a + c.tot, 0);
+    const rt = curRate();
     let pCash = 0, pCard = 0, pDebt = 0;
 
     const custObj = S.co.find(x => x.id == posSelectedCustId);
-    if ((sMode === "opt" || sMode === "box") && !custObj) {
-        if ($("selCustId")) $("selCustId").classList.add("input-err");
-        return fail("Optim / Karobka sotuv uchun roʻyxatdan mijozni tanlang!");
-    }
 
     if (payType === "cash") pCash = grandTot;
     else if (payType === "card") pCard = grandTot;
     else if (payType === "mix") {
-        pCash = val("pCashIn"); pCard = val("pCardIn");
-        if (pCash + pCard !== grandTot) return fail("Cash + Card ≠ Total!");
+        pCash = val("pCashIn") * rt; 
+        pCard = val("pCardIn") * rt;
+        if (Math.abs((pCash + pCard) - grandTot) > 10) return fail("Naqd + Karta summasi yakuniy summaga teng emas!");
     } else if (payType === "debt") {
         pDebt = grandTot;
         if (custObj) custObj.debt = (+custObj.debt || 0) + grandTot;
@@ -2234,12 +2331,12 @@ function sellMulti() {
             id: uid(), lot: item.lot, q: item.q, p: item.p, disc: item.disc, tot: item.tot,
             custId: custObj ? custObj.id : "", custName: custObj ? custObj.name : "",
             pCash: isFirst ? pCash : 0, pCard: isFirst ? pCard : 0, pDebt: isFirst ? pDebt : 0,
-            loc: curShop, by: role, t: Date.now()
+            loc: item.loc || defaultShop, by: role, t: Date.now()
         });
     });
 
     posCart = [];
-    OK = `✅ ${f(grandTot)} ${S.cur} ${custObj ? '(' + custObj.name + ')' : ''}`;
+    OK = `✅ Sotildi: ${f(grandTot)} ${S.cur} ${custObj ? '(' + custObj.name + ')' : ''}`;
     save(); render();
 }
 
