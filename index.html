@@ -3116,7 +3116,7 @@ function printSingleInvoice(cid, groupIdx) {
     const { c, groups } = getCustGroupedHistory(cid);
     const g = groups[groupIdx];
     if (!c || !g) return;
-    const shopTitle = (typeof USER !== "undefined" && USER?.name) ? USER.name.toUpperCase() : (S.brand?.name || "XOSHIMJON");
+    const shopTitle = (S.brand?.name || "FIVE-STAR").toUpperCase();
     const dtStr = new Date(g.t).toLocaleDateString("ru-RU");
 
     const w = window.open("", "_blank", "width=650,height=700");
@@ -3181,25 +3181,25 @@ function shareSingleInvoice(cid, groupIdx, platform) {
     const { c, groups } = getCustGroupedHistory(cid);
     const g = groups[groupIdx];
     if (!c || !g) return;
-    const shopTitle = (typeof USER !== "undefined" && USER?.name) ? USER.name.toUpperCase() : (S.brand?.name || "XOSHIMJON");
+    const shopTitle = (S.brand?.name || "FIVE-STAR").toUpperCase();
     const dtStr = new Date(g.t).toLocaleDateString("ru-RU");
 
-    let txt = `📋 *${shopTitle}* | 📅 ${dtStr}\n`;
-    txt += `👤 Mijoz: *${c.name}*\n`;
+    let txt = `*${shopTitle}* | ${dtStr}\n`;
+    txt += `Mijoz: *${c.name}*\n`;
     txt += `--------------------------------\n`;
     g.items.forEach((s, idx) => {
         const l = L(s.lot);
         txt += `${idx + 1}. *${l ? l.name : "Tovar"}*: ${s.q} x ${f(s.p)} = *${f(s.tot)} ${S.cur}*\n`;
     });
     txt += `--------------------------------\n`;
-    txt += `💰 Jami xarid: *${f(g.tot)} ${S.cur}*\n`;
-    txt += `✅ ОЛДИМ (To'landi): *${f(g.paidAmt)} ${S.cur}*\n`;
-    txt += `📌 АСТ (Eski qarz): *${f(g.oldDebt)} ${S.cur}*\n`;
-    txt += `🔴 КАЛДИ (Joriy jami qarz): *${f(c.debt || 0)} ${S.cur}*`;
+    txt += `▪ Jami xarid: *${f(g.tot)} ${S.cur}*\n`;
+    txt += `▪ ОЛДИМ (To'landi): *${f(g.paidAmt)} ${S.cur}*\n`;
+    txt += `▪ АСТ (Eski qarz): *${f(g.oldDebt)} ${S.cur}*\n`;
+    txt += `▪ КАЛДИ (Joriy jami qarz): *${f(c.debt || 0)} ${S.cur}*`;
 
     if (platform === "wa") {
         const phone = (c.phone || "").replace(/\D/g, "");
-        const url = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(txt)}` : `https://wa.me/?text=${encodeURIComponent(txt)}`;
+        const url = phone ? `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(txt)}` : `https://api.whatsapp.com/send?text=${encodeURIComponent(txt)}`;
         window.open(url, "_blank");
     } else {
         const url = `https://t.me/share/url?url=${encodeURIComponent(" ")}&text=${encodeURIComponent(txt)}`;
