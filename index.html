@@ -2618,6 +2618,681 @@ document.addEventListener("keydown", function(e) {
         }
     }
 });
+// =========================================================================
+// 🚀 QO'SHIMCHA MODULLAR: MIJOZ TARIXI, CHEK PECHAT, SKLAD TARIXI VA QIDIRUV
+// =========================================================================
+
+// 1. O'TKAZMA BO'LIMIDA HARF YOZIB QIDIRISH (LIVE FILTER)
+window.trfFilterText = "";
+function filterTrfSelect(q) {
+    window.trfFilterText = q;
+    const sel = $("tl");
+    if (!sel) return;
+    const readyLots = S.lots.filter(l => l.status !== "transit");
+    const fromId = $("mvFrom") ? $("mvFrom").value : (window.mvFromId || "wh1");
+    const availLots = readyLots.filter(l => inLoc(l, fromId) > 0);
+    
+    const words = (q || "").toLowerCase().trim().split(/\s+/).filter(Boolean);
+    const filtered = availLots.filter(l => {
+        const target = ((l.name || "") + " " + (l.bc || "")).toLowerCase();
+        return words.every(w => target.includes(w));
+    });
+
+    if (filtered.length) {
+        sel.innerHTML = filtered.map(l => 
+            `<option value="${l.id}">${esc(l.name)} (${tr("inWhCol")}: ${bx(l,inWh(l))} | ${tr("inMkCol")}: ${bx(l,inMk(l))})</option>`
+        ).join("");
+    } else {
+        sel.innerHTML = `<option value="">❌ Bunday tovar topilmadi</option>`;
+    }
+}
+
+// 2. SKLAD TARIXINI (AUDIT LOG) AVTOMATIK YOZIB BORISH
+function addWhLog(act, prodName, details) {
+    if (!S.whLogs) S.whLogs = [];
+    S.whLogs.push({
+        id: uid(),
+        t: Date.now(),
+        by: (typeof USER !== "undefined" && USER?.name) ? USER.name : role,
+        act: act,
+        name: prodName,
+        det: details
+    });
+    if (S.whLogs.length > 300) S.whLogs = S.whLogs.slice(-300);
+}
+
+if (typeof saveDirectWhProduct === "function" && !window._whHooked) {
+    window._whHooked = true;
+    const _origSaveWh = saveDirectWhProduct;
+    saveDirectWhProduct = function(existingLotId) {
+        const nm = ($("dwNm")?.value || "").trim();
+        const bxCnt = Math.max(0, val("dwBx"));
+        const perBx = Math.max(0, val("dwPc"));
+        const extraPcs = Math.max(0, val("dwExtraPcs"));
+        const totPcs = (bxCnt > 0 ? bxCnt * (perBx || 1) : 0) + extraPcs;
+        const costCur = val("dwCost");
+        const pOpt = val("dwPOpt");
+        const isEdit = !!existingLotId;
+
+        _origSaveWh(existingLotId);
+
+        if (nm && totPcs > 0 && costCur > 0) {
+            addWhLog(
+                isEdit ? "✏️ Tahrirlandi" : "➕ Kiritildi",
+                nm,
+                `${totPcs} dona | Tannarx: ${costCur} ${S.cur} | Optim: ${pOpt} ${S.cur}`
+            );
+            save();
+            render();
+        }
+    };
+}
+
+if (typeof delLot === "function" && !window._delHooked) {
+    window._delHooked = true;
+    const _origDelLot = delLot;
+    delLot = function(id) {
+        const l = L(id);
+        const nm = l ? l.name : "Noma'lum";
+        const q = l ? tot(l) : 0;
+        const oldLen = S.lots.length;
+        _origDelLot(id);
+        if (S.lots.length < oldLen) {
+            addWhLog("🗑️ O'chirildi", nm, `Qoldiq: ${q} dona edi`);
+            save();
+            render();
+        }
+    };
+}
+
+// 3. MIJOZNING TO'LOV TARIXINI SAQLAB BORISH
+if (!window._debtHooked) {
+    window._debtHooked = true;
+    document.addEventListener("click", function(e) {
+        const btn = e.target.closest("button");
+        if (!btn) return;
+        const oc = btn.getAttribute("onclick") || "";
+        if (oc.includes("payDebt") || oc.includes("payCust")) {
+            const m = oc.match(/['"]([^'"]+)['"]/);
+            if (m && m[1]) {
+                const cid = m[1];
+                const c = (S.co || []).find(x => x.id == cid);
+                if (c) {
+                    const oldDebt = +c.debt || 0;
+                    setTimeout(() => {
+                        const newDebt = +c.debt || 0;
+                        if (oldDebt > newDebt) {
+                            const paid = Math.round((oldDebt - newDebt) * 100) / 100;
+                            if (!c.payHist) c.payHist = [];
+                            c.payHist.push({
+                                t: Date.now(),
+                                amt: paid,
+                                rem: newDebt,
+                                by: (typeof USER !== "undefined" && USER?.name) ? USER.name : role
+                            });
+                            save();
+                        }
+                    }, 150);
+                }
+            }
+        }
+    }, true);
+}
+
+// 4. CHEK CHIQARISH (🖨️ PECHAT FUNKSIYASI)
+function printReceiptHtml(title, rowsHtml, footerHtml) {
+    const w = window.open("", "_blank", "width=420,height=650");
+    if (!w) return alert("Brauzerda yangi oyna ochishga ruxsat bering!");
+    const shopName = S.brand?.name || "FIVE-STAR";
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Chek - ${shopName}</title>
+    <style>
+        body { font-family: 'Courier New', monospace; width: 300px; margin: 0 auto; padding: 12px; color: #000; font-size: 13px; }
+        h2, h4, p { margin: 4px 0; text-align: center; }
+        hr { border: none; border-top: 1px dashed #000; margin: 8px 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { text-align: left; padding: 4px 2px; border-bottom: 1px dotted #ccc; }
+        .r { text-align: right; }
+        .tot { font-size: 14px; font-weight: bold; margin-top: 8px; }
+        .no-print { text-align: center; margin-bottom: 12px; }
+        .btn { padding: 8px 14px; background: #10b981; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        @media print { .no-print { display: none; } }
+    </style></head><body>
+        <div class="no-print">
+            <button class="btn" onclick="window.print()">🖨️ Pechat qilish</button>
+            <button class="btn" style="background:#64748b" onclick="window.close()">✕ Yopish</button>
+        </div>
+        <h2>${shopName}</h2>
+        <h4>${title}</h4>
+        <p>${new Date().toLocaleString()}</p>
+        <hr>
+        <table>
+            <tr><th>Tovar</th><th class="r">Soni x Narx</th><th class="r">Summa</th></tr>
+            ${rowsHtml}
+        </table>
+        <hr>
+        <div class="tot">${footerHtml}</div>
+        <hr>
+        <p>Xaridingiz uchun rahmat!</p>
+    </body></html>`);
+    w.document.close();
+}
+
+function printLastSaleCheck() {
+    if (!S.sales || !S.sales.length) return alert("Hali sotuvlar mavjud emas!");
+    const lastSale = S.sales[S.sales.length - 1];
+    // Shu vaqtda (2 soniya ichida) bitta chekda sotilgan barcha tovarlarni olamiz:
+    const batchSales = S.sales.filter(s => Math.abs(s.t - lastSale.t) <= 2000 && s.custId === lastSale.custId);
+    let totSum = 0;
+    const rows = batchSales.map(s => {
+        const l = L(s.lot);
+        const nm = l ? l.name : "Tovar";
+        totSum += (+s.tot || 0);
+        return `<tr><td><b>${esc(nm)}</b></td><td class="r">${s.q} x ${f(s.p)}</td><td class="r"><b>${f(s.tot)}</b></td></tr>`;
+    }).join("");
+    const custInfo = lastSale.custName ? `Mijoz: ${esc(lastSale.custName)}<br>` : "";
+    const debtInfo = lastSale.pDebt > 0 ? `<span style="color:red">Nasiya (Qarz): ${f(lastSale.pDebt)} ${S.cur}</span><br>` : "";
+    printReceiptHtml("XARID CHEKI", rows, `${custInfo}JAMI: ${f(totSum)} ${S.cur}<br>${debtInfo}`);
+}
+
+function printCustFullCheck(cid) {
+    const c = (S.co || []).find(x => x.id == cid);
+    if (!c) return;
+    const sales = (S.sales || []).filter(s => s.custId == c.id || (c.name && s.custName === c.name));
+    let totBought = 0;
+    const rows = sales.map(s => {
+        const l = L(s.lot);
+        const nm = l ? l.name : "Tovar";
+        totBought += (+s.tot || 0);
+        return `<tr><td>${tm(s.t)}<br><b>${esc(nm)}</b></td><td class="r">${s.q} x ${f(s.p)}</td><td class="r"><b>${f(s.tot)}</b></td></tr>`;
+    }).join("");
+    const footer = `Mijoz: ${esc(c.name)}<br>Telefon: ${esc(c.phone || "-")}<br>Jami olgan tovarlari: ${f(totBought)} ${S.cur}<br><span style="font-size:15px">JORIY QOLGAN QARZ: ${f(c.debt || 0)} ${S.cur}</span>`;
+    printReceiptHtml("MIJOZ HISOB-KITOB CHEKI", rows || `<tr><td colspan="3">Xaridlar yo'q</td></tr>`, footer);
+}
+
+// 5. MIJOZ TARIXI MODAL OYNASI
+window.activeCustHistoryId = null;
+function openCustHistory(cid) {
+    window.activeCustHistoryId = cid;
+    render();
+}
+
+function buildCustHistoryModal() {
+    if (!window.activeCustHistoryId) return "";
+    const c = (S.co || []).find(x => x.id == window.activeCustHistoryId);
+    if (!c) return "";
+    const sales = (S.sales || []).filter(s => s.custId == c.id || (c.name && s.custName === c.name)).slice().reverse();
+    const pays = (c.payHist || []).slice().reverse();
+    const totalSalesSum = sales.reduce((a, b) => a + (+b.tot || 0), 0);
+
+    return `<div id="custHistModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:9999;display:flex;align-items:center;justify-content:center;padding:15px">
+        <div class="c" style="width:100%;max-width:780px;max-height:88vh;overflow-y:auto;background:#0f172a;border:2px solid var(--ac);border-radius:14px;padding:18px">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;border-bottom:1px solid var(--ln);padding-bottom:12px;margin-bottom:12px">
+                <div>
+                    <h3 style="margin:0">👤 ${esc(c.name)} — Xarid va To'lovlar Tarixi</h3>
+                    <div class="mu" style="margin-top:4px">📞 ${esc(c.phone || "-")} | Jami olgan: <b>${f(totalSalesSum)} ${S.cur}</b> | Joriy qarz: <b style="color:#ef4444">${f(c.debt || 0)} ${S.cur}</b></div>
+                </div>
+                <div style="display:flex;gap:8px">
+                    <button class="b b-sm b-ok" onclick="printCustFullCheck('${c.id}')">🖨️ Chek chiqarish (Pechat)</button>
+                    <button class="b b-sm b-bad" onclick="window.activeCustHistoryId=null;render()">✕ Yopish</button>
+                </div>
+            </div>
+
+            <h4 style="margin:8px 0">🛒 Olgan tovarlari (Sana va summa bilan):</h4>
+            ${sales.length ? `<div class="tw"><table>
+                <tr><th>Sana / Vaqt</th><th>Tovar nomi</th><th>Soni</th><th>1 dona narxi</th><th>Jami summa</th><th>Holati</th></tr>
+                ${sales.map(s => {
+                    const l = L(s.lot);
+                    return `<tr>
+                        <td class="mu">${tm(s.t)}</td>
+                        <td><b>${esc(l ? l.name : "Tovar")}</b></td>
+                        <td><b>${s.q}</b> dona</td>
+                        <td>${f(s.p)} ${S.cur}</td>
+                        <td><b>${f(s.tot)} ${S.cur}</b></td>
+                        <td>${s.pDebt > 0 ? `<span class="badge badge-bad">Nasiya: ${f(s.pDebt)} ${S.cur}</span>` : `<span class="badge badge-ok">To'langan</span>`}</td>
+                    </tr>`;
+                }).join("")}
+            </table></div>` : `<p class="mu">Bu mijozda hali xaridlar tarixi yo'q.</p>`}
+
+            <h4 style="margin:16px 0 8px">💵 Qilgan to'lovlari tarixi:</h4>
+            ${pays.length ? `<div class="tw"><table>
+                <tr><th>To'langan sana</th><th>To'langan summa</th><th>Qolgan qarz</th><th>Qabul qildi</th></tr>
+                ${pays.map(p => `<tr>
+                    <td class="mu">${tm(p.t)}</td>
+                    <td><b style="color:#10b981">+${f(p.amt)} ${S.cur}</b></td>
+                    <td><b>${f(p.rem)} ${S.cur}</b></td>
+                    <td>${esc(p.by || "-")}</td>
+                </tr>`).join("")}
+            </table></div>` : `<p class="mu">To'lovlar tarixi shu kundan boshlab har safar qarz to'langanda avtomatik yozib boriladi.</p>`}
+        </div>
+    </div>`;
+}
+
+// 6. SAHIFA CHIZILGANDA (RENDER) AVTOMATIK RAVISHDA TUGMALAR VA JADVALLARNI QO'SHISH
+if (typeof render === "function" && !window._renderHooked) {
+    window._renderHooked = true;
+    const _origRender = render;
+    render = function() {
+        _origRender();
+
+        // A) O'tkazma bo'limiga "Harf yozib qidirish" katagini avtomatik qo'shish:
+        const tlSel = $("tl");
+        if (tlSel && !$("trfQuickSearch")) {
+            const inp = document.createElement("input");
+            inp.id = "trfQuickSearch";
+            inp.placeholder = "🔍 Harflarni yozib qidiring (masalan: GED K)...";
+            inp.value = window.trfFilterText || "";
+            inp.style.marginBottom = "8px";
+            inp.style.border = "1px solid var(--ac)";
+            inp.oninput = function() { filterTrfSelect(this.value); };
+            tlSel.parentNode.insertBefore(inp, tlSel);
+            if (window.trfFilterText) filterTrfSelect(window.trfFilterText);
+        }
+
+        // B) Sotuv (POS) bo'limiga "🖨️ Oxirgi chekni pechat qilish" tugmasini qo'shish:
+        const sellBtn = document.querySelector("button[onclick*='sellMulti']");
+        if (sellBtn && !$("posPrintBtn")) {
+            const pBtn = document.createElement("button");
+            pBtn.id = "posPrintBtn";
+            pBtn.className = "b b-out";
+            pBtn.style.marginTop = "8px";
+            pBtn.style.width = "100%";
+            pBtn.innerHTML = "🖨️ Oxirgi sotuv chekini chiqarish (Pechat)";
+            pBtn.onclick = printLastSaleCheck;
+            sellBtn.insertAdjacentElement("afterend", pBtn);
+        }
+
+        // C) Mijoz va Nasiya bo'limida mijoz ismini bosiladigan qilish va "📋 Tarix / 🖨️ Chek" tugmasini qo'shish:
+        if (S.co && S.co.length) {
+            document.querySelectorAll("table tr").forEach(trEl => {
+                const firstTd = trEl.querySelector("td");
+                if (!firstTd || firstTd.dataset.custLinked) return;
+                const tdText = firstTd.innerText || "";
+                const matchedCust = S.co.find(c => c.name && tdText.includes(c.name));
+                if (matchedCust) {
+                    firstTd.dataset.custLinked = "1";
+                    firstTd.style.cursor = "pointer";
+                    firstTd.title = "Xarid va to'lovlar tarixini ko'rish uchun bosing";
+                    firstTd.onclick = () => openCustHistory(matchedCust.id);
+                    const bTag = firstTd.querySelector("b") || firstTd;
+                    bTag.style.color = "#38bdf8";
+                    bTag.style.textDecoration = "underline";
+                    firstTd.insertAdjacentHTML("beforeend", ` <span class="badge badge-ok" style="cursor:pointer;margin-left:6px">📋 Tarix / 🖨️ Chek</span>`);
+                }
+            });
+        }
+
+        // D) Sklad bo'limining eng pastiga "Sklad Tarixi (Kiritish / Tahrirlash / O'chirish)" jadvalini qo'shish:
+        if (typeof tab !== "undefined" && tab === "wh" && !$("whAuditBox")) {
+            const wrap = document.querySelector(".wrap");
+            if (wrap) {
+                const logs = (S.whLogs || []).slice().reverse();
+                const div = document.createElement("div");
+                div.id = "whAuditBox";
+                div.className = "c";
+                div.style.marginTop = "16px";
+                div.innerHTML = `
+                    <h3><span>📜 Sklad Tarixi (Kiritish, Tahrirlash va O'chirish)</span> <span class="badge">${logs.length} ta amal</span></h3>
+                    ${logs.length ? `<div class="tw"><table>
+                        <tr><th>Sana / Vaqt</th><th>Amal</th><th>Tovar nomi</th><th>Tafsilotlar</th><th>Kim bajardi</th></tr>
+                        ${logs.slice(0, 50).map(lg => `<tr>
+                            <td class="mu">${tm(lg.t)}</td>
+                            <td><span class="badge ${lg.act.includes('Kiritildi')?'badge-ok':(lg.act.includes('O\'chirildi')?'badge-bad':'badge-tp')}">${esc(lg.act)}</span></td>
+                            <td><b>${esc(lg.name)}</b></td>
+                            <td>${esc(lg.det)}</td>
+                            <td><b>${esc(lg.by)}</b></td>
+                        </tr>`).join("")}
+                    </table></div>` : `<p class="mu">Hozircha tarix bo'sh. Skladga tovar kiritsangiz, tahrirlasangiz yoki o'chirsangiz shu yerda yozilib boradi.</p>`}
+                `;
+                wrap.appendChild(div);
+            }
+        }
+
+        // E) Mijoz tarixi modal oynasini ekranga chiqarish:
+        const oldModal = $("custHistModal");
+        if (oldModal) oldModal.remove();
+        if (window.activeCustHistoryId) {
+            document.body.insertAdjacentHTML("beforeend", buildCustHistoryModal());
+        }
+    };
+    render();
+}// =========================================================================
+// 🚀 QO'SHIMCHA MODULLAR: MIJOZ TARIXI, CHEK PECHAT, SKLAD TARIXI VA QIDIRUV
+// =========================================================================
+
+// 1. O'TKAZMA BO'LIMIDA HARF YOZIB QIDIRISH (LIVE FILTER)
+window.trfFilterText = "";
+function filterTrfSelect(q) {
+    window.trfFilterText = q;
+    const sel = $("tl");
+    if (!sel) return;
+    const readyLots = S.lots.filter(l => l.status !== "transit");
+    const fromId = $("mvFrom") ? $("mvFrom").value : (window.mvFromId || "wh1");
+    const availLots = readyLots.filter(l => inLoc(l, fromId) > 0);
+    
+    const words = (q || "").toLowerCase().trim().split(/\s+/).filter(Boolean);
+    const filtered = availLots.filter(l => {
+        const target = ((l.name || "") + " " + (l.bc || "")).toLowerCase();
+        return words.every(w => target.includes(w));
+    });
+
+    if (filtered.length) {
+        sel.innerHTML = filtered.map(l => 
+            `<option value="${l.id}">${esc(l.name)} (${tr("inWhCol")}: ${bx(l,inWh(l))} | ${tr("inMkCol")}: ${bx(l,inMk(l))})</option>`
+        ).join("");
+    } else {
+        sel.innerHTML = `<option value="">❌ Bunday tovar topilmadi</option>`;
+    }
+}
+
+// 2. SKLAD TARIXINI (AUDIT LOG) AVTOMATIK YOZIB BORISH
+function addWhLog(act, prodName, details) {
+    if (!S.whLogs) S.whLogs = [];
+    S.whLogs.push({
+        id: uid(),
+        t: Date.now(),
+        by: (typeof USER !== "undefined" && USER?.name) ? USER.name : role,
+        act: act,
+        name: prodName,
+        det: details
+    });
+    if (S.whLogs.length > 300) S.whLogs = S.whLogs.slice(-300);
+}
+
+if (typeof saveDirectWhProduct === "function" && !window._whHooked) {
+    window._whHooked = true;
+    const _origSaveWh = saveDirectWhProduct;
+    saveDirectWhProduct = function(existingLotId) {
+        const nm = ($("dwNm")?.value || "").trim();
+        const bxCnt = Math.max(0, val("dwBx"));
+        const perBx = Math.max(0, val("dwPc"));
+        const extraPcs = Math.max(0, val("dwExtraPcs"));
+        const totPcs = (bxCnt > 0 ? bxCnt * (perBx || 1) : 0) + extraPcs;
+        const costCur = val("dwCost");
+        const pOpt = val("dwPOpt");
+        const isEdit = !!existingLotId;
+
+        _origSaveWh(existingLotId);
+
+        if (nm && totPcs > 0 && costCur > 0) {
+            addWhLog(
+                isEdit ? "✏️ Tahrirlandi" : "➕ Kiritildi",
+                nm,
+                `${totPcs} dona | Tannarx: ${costCur} ${S.cur} | Optim: ${pOpt} ${S.cur}`
+            );
+            save();
+            render();
+        }
+    };
+}
+
+if (typeof delLot === "function" && !window._delHooked) {
+    window._delHooked = true;
+    const _origDelLot = delLot;
+    delLot = function(id) {
+        const l = L(id);
+        const nm = l ? l.name : "Noma'lum";
+        const q = l ? tot(l) : 0;
+        const oldLen = S.lots.length;
+        _origDelLot(id);
+        if (S.lots.length < oldLen) {
+            addWhLog("🗑️ O'chirildi", nm, `Qoldiq: ${q} dona edi`);
+            save();
+            render();
+        }
+    };
+}
+
+// 3. MIJOZNING TO'LOV TARIXINI SAQLAB BORISH
+if (!window._debtHooked) {
+    window._debtHooked = true;
+    document.addEventListener("click", function(e) {
+        const btn = e.target.closest("button");
+        if (!btn) return;
+        const oc = btn.getAttribute("onclick") || "";
+        if (oc.includes("payDebt") || oc.includes("payCust")) {
+            const m = oc.match(/['"]([^'"]+)['"]/);
+            if (m && m[1]) {
+                const cid = m[1];
+                const c = (S.co || []).find(x => x.id == cid);
+                if (c) {
+                    const oldDebt = +c.debt || 0;
+                    setTimeout(() => {
+                        const newDebt = +c.debt || 0;
+                        if (oldDebt > newDebt) {
+                            const paid = Math.round((oldDebt - newDebt) * 100) / 100;
+                            if (!c.payHist) c.payHist = [];
+                            c.payHist.push({
+                                t: Date.now(),
+                                amt: paid,
+                                rem: newDebt,
+                                by: (typeof USER !== "undefined" && USER?.name) ? USER.name : role
+                            });
+                            save();
+                        }
+                    }, 150);
+                }
+            }
+        }
+    }, true);
+}
+
+// 4. CHEK CHIQARISH (🖨️ PECHAT FUNKSIYASI)
+function printReceiptHtml(title, rowsHtml, footerHtml) {
+    const w = window.open("", "_blank", "width=420,height=650");
+    if (!w) return alert("Brauzerda yangi oyna ochishga ruxsat bering!");
+    const shopName = S.brand?.name || "FIVE-STAR";
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Chek - ${shopName}</title>
+    <style>
+        body { font-family: 'Courier New', monospace; width: 300px; margin: 0 auto; padding: 12px; color: #000; font-size: 13px; }
+        h2, h4, p { margin: 4px 0; text-align: center; }
+        hr { border: none; border-top: 1px dashed #000; margin: 8px 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { text-align: left; padding: 4px 2px; border-bottom: 1px dotted #ccc; }
+        .r { text-align: right; }
+        .tot { font-size: 14px; font-weight: bold; margin-top: 8px; }
+        .no-print { text-align: center; margin-bottom: 12px; }
+        .btn { padding: 8px 14px; background: #10b981; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        @media print { .no-print { display: none; } }
+    </style></head><body>
+        <div class="no-print">
+            <button class="btn" onclick="window.print()">🖨️ Pechat qilish</button>
+            <button class="btn" style="background:#64748b" onclick="window.close()">✕ Yopish</button>
+        </div>
+        <h2>${shopName}</h2>
+        <h4>${title}</h4>
+        <p>${new Date().toLocaleString()}</p>
+        <hr>
+        <table>
+            <tr><th>Tovar</th><th class="r">Soni x Narx</th><th class="r">Summa</th></tr>
+            ${rowsHtml}
+        </table>
+        <hr>
+        <div class="tot">${footerHtml}</div>
+        <hr>
+        <p>Xaridingiz uchun rahmat!</p>
+    </body></html>`);
+    w.document.close();
+}
+
+function printLastSaleCheck() {
+    if (!S.sales || !S.sales.length) return alert("Hali sotuvlar mavjud emas!");
+    const lastSale = S.sales[S.sales.length - 1];
+    // Shu vaqtda (2 soniya ichida) bitta chekda sotilgan barcha tovarlarni olamiz:
+    const batchSales = S.sales.filter(s => Math.abs(s.t - lastSale.t) <= 2000 && s.custId === lastSale.custId);
+    let totSum = 0;
+    const rows = batchSales.map(s => {
+        const l = L(s.lot);
+        const nm = l ? l.name : "Tovar";
+        totSum += (+s.tot || 0);
+        return `<tr><td><b>${esc(nm)}</b></td><td class="r">${s.q} x ${f(s.p)}</td><td class="r"><b>${f(s.tot)}</b></td></tr>`;
+    }).join("");
+    const custInfo = lastSale.custName ? `Mijoz: ${esc(lastSale.custName)}<br>` : "";
+    const debtInfo = lastSale.pDebt > 0 ? `<span style="color:red">Nasiya (Qarz): ${f(lastSale.pDebt)} ${S.cur}</span><br>` : "";
+    printReceiptHtml("XARID CHEKI", rows, `${custInfo}JAMI: ${f(totSum)} ${S.cur}<br>${debtInfo}`);
+}
+
+function printCustFullCheck(cid) {
+    const c = (S.co || []).find(x => x.id == cid);
+    if (!c) return;
+    const sales = (S.sales || []).filter(s => s.custId == c.id || (c.name && s.custName === c.name));
+    let totBought = 0;
+    const rows = sales.map(s => {
+        const l = L(s.lot);
+        const nm = l ? l.name : "Tovar";
+        totBought += (+s.tot || 0);
+        return `<tr><td>${tm(s.t)}<br><b>${esc(nm)}</b></td><td class="r">${s.q} x ${f(s.p)}</td><td class="r"><b>${f(s.tot)}</b></td></tr>`;
+    }).join("");
+    const footer = `Mijoz: ${esc(c.name)}<br>Telefon: ${esc(c.phone || "-")}<br>Jami olgan tovarlari: ${f(totBought)} ${S.cur}<br><span style="font-size:15px">JORIY QOLGAN QARZ: ${f(c.debt || 0)} ${S.cur}</span>`;
+    printReceiptHtml("MIJOZ HISOB-KITOB CHEKI", rows || `<tr><td colspan="3">Xaridlar yo'q</td></tr>`, footer);
+}
+
+// 5. MIJOZ TARIXI MODAL OYNASI
+window.activeCustHistoryId = null;
+function openCustHistory(cid) {
+    window.activeCustHistoryId = cid;
+    render();
+}
+
+function buildCustHistoryModal() {
+    if (!window.activeCustHistoryId) return "";
+    const c = (S.co || []).find(x => x.id == window.activeCustHistoryId);
+    if (!c) return "";
+    const sales = (S.sales || []).filter(s => s.custId == c.id || (c.name && s.custName === c.name)).slice().reverse();
+    const pays = (c.payHist || []).slice().reverse();
+    const totalSalesSum = sales.reduce((a, b) => a + (+b.tot || 0), 0);
+
+    return `<div id="custHistModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:9999;display:flex;align-items:center;justify-content:center;padding:15px">
+        <div class="c" style="width:100%;max-width:780px;max-height:88vh;overflow-y:auto;background:#0f172a;border:2px solid var(--ac);border-radius:14px;padding:18px">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;border-bottom:1px solid var(--ln);padding-bottom:12px;margin-bottom:12px">
+                <div>
+                    <h3 style="margin:0">👤 ${esc(c.name)} — Xarid va To'lovlar Tarixi</h3>
+                    <div class="mu" style="margin-top:4px">📞 ${esc(c.phone || "-")} | Jami olgan: <b>${f(totalSalesSum)} ${S.cur}</b> | Joriy qarz: <b style="color:#ef4444">${f(c.debt || 0)} ${S.cur}</b></div>
+                </div>
+                <div style="display:flex;gap:8px">
+                    <button class="b b-sm b-ok" onclick="printCustFullCheck('${c.id}')">🖨️ Chek chiqarish (Pechat)</button>
+                    <button class="b b-sm b-bad" onclick="window.activeCustHistoryId=null;render()">✕ Yopish</button>
+                </div>
+            </div>
+
+            <h4 style="margin:8px 0">🛒 Olgan tovarlari (Sana va summa bilan):</h4>
+            ${sales.length ? `<div class="tw"><table>
+                <tr><th>Sana / Vaqt</th><th>Tovar nomi</th><th>Soni</th><th>1 dona narxi</th><th>Jami summa</th><th>Holati</th></tr>
+                ${sales.map(s => {
+                    const l = L(s.lot);
+                    return `<tr>
+                        <td class="mu">${tm(s.t)}</td>
+                        <td><b>${esc(l ? l.name : "Tovar")}</b></td>
+                        <td><b>${s.q}</b> dona</td>
+                        <td>${f(s.p)} ${S.cur}</td>
+                        <td><b>${f(s.tot)} ${S.cur}</b></td>
+                        <td>${s.pDebt > 0 ? `<span class="badge badge-bad">Nasiya: ${f(s.pDebt)} ${S.cur}</span>` : `<span class="badge badge-ok">To'langan</span>`}</td>
+                    </tr>`;
+                }).join("")}
+            </table></div>` : `<p class="mu">Bu mijozda hali xaridlar tarixi yo'q.</p>`}
+
+            <h4 style="margin:16px 0 8px">💵 Qilgan to'lovlari tarixi:</h4>
+            ${pays.length ? `<div class="tw"><table>
+                <tr><th>To'langan sana</th><th>To'langan summa</th><th>Qolgan qarz</th><th>Qabul qildi</th></tr>
+                ${pays.map(p => `<tr>
+                    <td class="mu">${tm(p.t)}</td>
+                    <td><b style="color:#10b981">+${f(p.amt)} ${S.cur}</b></td>
+                    <td><b>${f(p.rem)} ${S.cur}</b></td>
+                    <td>${esc(p.by || "-")}</td>
+                </tr>`).join("")}
+            </table></div>` : `<p class="mu">To'lovlar tarixi shu kundan boshlab har safar qarz to'langanda avtomatik yozib boriladi.</p>`}
+        </div>
+    </div>`;
+}
+
+// 6. SAHIFA CHIZILGANDA (RENDER) AVTOMATIK RAVISHDA TUGMALAR VA JADVALLARNI QO'SHISH
+if (typeof render === "function" && !window._renderHooked) {
+    window._renderHooked = true;
+    const _origRender = render;
+    render = function() {
+        _origRender();
+
+        // A) O'tkazma bo'limiga "Harf yozib qidirish" katagini avtomatik qo'shish:
+        const tlSel = $("tl");
+        if (tlSel && !$("trfQuickSearch")) {
+            const inp = document.createElement("input");
+            inp.id = "trfQuickSearch";
+            inp.placeholder = "🔍 Harflarni yozib qidiring (masalan: GED K)...";
+            inp.value = window.trfFilterText || "";
+            inp.style.marginBottom = "8px";
+            inp.style.border = "1px solid var(--ac)";
+            inp.oninput = function() { filterTrfSelect(this.value); };
+            tlSel.parentNode.insertBefore(inp, tlSel);
+            if (window.trfFilterText) filterTrfSelect(window.trfFilterText);
+        }
+
+        // B) Sotuv (POS) bo'limiga "🖨️ Oxirgi chekni pechat qilish" tugmasini qo'shish:
+        const sellBtn = document.querySelector("button[onclick*='sellMulti']");
+        if (sellBtn && !$("posPrintBtn")) {
+            const pBtn = document.createElement("button");
+            pBtn.id = "posPrintBtn";
+            pBtn.className = "b b-out";
+            pBtn.style.marginTop = "8px";
+            pBtn.style.width = "100%";
+            pBtn.innerHTML = "🖨️ Oxirgi sotuv chekini chiqarish (Pechat)";
+            pBtn.onclick = printLastSaleCheck;
+            sellBtn.insertAdjacentElement("afterend", pBtn);
+        }
+
+        // C) Mijoz va Nasiya bo'limida mijoz ismini bosiladigan qilish va "📋 Tarix / 🖨️ Chek" tugmasini qo'shish:
+        if (S.co && S.co.length) {
+            document.querySelectorAll("table tr").forEach(trEl => {
+                const firstTd = trEl.querySelector("td");
+                if (!firstTd || firstTd.dataset.custLinked) return;
+                const tdText = firstTd.innerText || "";
+                const matchedCust = S.co.find(c => c.name && tdText.includes(c.name));
+                if (matchedCust) {
+                    firstTd.dataset.custLinked = "1";
+                    firstTd.style.cursor = "pointer";
+                    firstTd.title = "Xarid va to'lovlar tarixini ko'rish uchun bosing";
+                    firstTd.onclick = () => openCustHistory(matchedCust.id);
+                    const bTag = firstTd.querySelector("b") || firstTd;
+                    bTag.style.color = "#38bdf8";
+                    bTag.style.textDecoration = "underline";
+                    firstTd.insertAdjacentHTML("beforeend", ` <span class="badge badge-ok" style="cursor:pointer;margin-left:6px">📋 Tarix / 🖨️ Chek</span>`);
+                }
+            });
+        }
+
+        // D) Sklad bo'limining eng pastiga "Sklad Tarixi (Kiritish / Tahrirlash / O'chirish)" jadvalini qo'shish:
+        if (typeof tab !== "undefined" && tab === "wh" && !$("whAuditBox")) {
+            const wrap = document.querySelector(".wrap");
+            if (wrap) {
+                const logs = (S.whLogs || []).slice().reverse();
+                const div = document.createElement("div");
+                div.id = "whAuditBox";
+                div.className = "c";
+                div.style.marginTop = "16px";
+                div.innerHTML = `
+                    <h3><span>📜 Sklad Tarixi (Kiritish, Tahrirlash va O'chirish)</span> <span class="badge">${logs.length} ta amal</span></h3>
+                    ${logs.length ? `<div class="tw"><table>
+                        <tr><th>Sana / Vaqt</th><th>Amal</th><th>Tovar nomi</th><th>Tafsilotlar</th><th>Kim bajardi</th></tr>
+                        ${logs.slice(0, 50).map(lg => `<tr>
+                            <td class="mu">${tm(lg.t)}</td>
+                            <td><span class="badge ${lg.act.includes('Kiritildi')?'badge-ok':(lg.act.includes('O\'chirildi')?'badge-bad':'badge-tp')}">${esc(lg.act)}</span></td>
+                            <td><b>${esc(lg.name)}</b></td>
+                            <td>${esc(lg.det)}</td>
+                            <td><b>${esc(lg.by)}</b></td>
+                        </tr>`).join("")}
+                    </table></div>` : `<p class="mu">Hozircha tarix bo'sh. Skladga tovar kiritsangiz, tahrirlasangiz yoki o'chirsangiz shu yerda yozilib boradi.</p>`}
+                `;
+                wrap.appendChild(div);
+            }
+        }
+
+        // E) Mijoz tarixi modal oynasini ekranga chiqarish:
+        const oldModal = $("custHistModal");
+        if (oldModal) oldModal.remove();
+        if (window.activeCustHistoryId) {
+            document.body.insertAdjacentHTML("beforeend", buildCustHistoryModal());
+        }
+    };
+    render();
+}
 
 render();
 loadFromSupabase();
