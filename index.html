@@ -311,7 +311,7 @@ let buyPrefs = {
 };
 
 let S = {
-    brand: { name: "Bozor hisobi", logo: "", shopId: "849201", promoBy: "" },
+   brand: { name: "FIVE-STAR", logo: "", shopId: "417281", promoBy: "" },
     locs: [
         { id: "wh1", name: "Asosiy Sklad", type: "wh" },
         { id: "mk1", name: "1-Doʻkon (Asosiy)", type: "mk" }
@@ -347,6 +347,7 @@ try {
         if (!S.cart) S.cart = [];
         if (!S.rate || !S.rate.KGS) S.rate = { UZS: 1, KGS: 145, USD: 12600, CNY: 1750, RUB: 135, KZT: 26, TJS: 1150 };
         if (!S.rate.TJS) S.rate.TJS = 1150;
+        S.brand.shopId = "417281";
     }
 } catch(e) {}
 
@@ -1823,16 +1824,19 @@ function bioLogin(uidStr) {
     const u = S.users.find(x => x.id == uidStr);
     if (u) finishAuth(u);
 }
-function finishAuth(u) {
+async function finishAuth(u) {
     USER = u; role = u.role;
     u.lang = S.lang; u.cur = S.cur;
+    S.brand.shopId = "417281";
     if (!u.locs) u.locs = u.loc && u.loc !== "all" ? [u.loc] : S.locs.map(l => l.id);
     activeLoc = (role === "sel" && u.locs.length === 1) ? u.locs[0] : "all";
     try {
         localStorage.setItem(KEY + "-u", u.id);
         if (u.bio) localStorage.setItem(KEY + "-bio-u", u.id);
     } catch(e) {}
-    save(); tab = getTabs()[0][0]; render();
+    await loadFromSupabase();
+    tab = getTabs()[0][0]; 
+    render();
 }
 function registerCustomerAuth() {
     const nm = $("cRegNm").value.trim(), lg = $("cRegLg").value.trim(), pw = $("cRegPw").value.trim() || "1234";
@@ -2565,6 +2569,16 @@ let _syncBusy = false;
 let _syncPending = false;
 let _lastPushTime = 0;
 
+let _cloudLoadedOnce = false;
+
+// loadFromSupabase muvaffaqiyatli tugaganda qulfni ochamiz:
+const _origLoadSup = loadFromSupabase;
+loadFromSupabase = async function() {
+    S.brand.shopId = "417281";
+    await _origLoadSup();
+    _cloudLoadedOnce = true;
+};
+
 async function _flushToCloud() {
     if (!supabaseClient) return;
     if (_syncBusy) { _syncPending = true; return; }
@@ -2572,7 +2586,26 @@ async function _flushToCloud() {
     _syncPending = false;
 
     try {
-        const targetShopId = S.brand?.shopId || "default";
+        const targetShopId = "417281";
+        S.brand.shopId = targetShopId;
+
+        // HIMOYA QULFI: Agar hozirgi qurilmada tovarlar 0 ta bo'lsa, avval bazani tekshiramiz!
+        if (!S.lots || S.lots.length === 0) {
+            const { data: chk } = await supabaseClient
+                .from('crm_state')
+                .select('data')
+                .eq('shop_id', targetShopId)
+                .maybeSingle();
+            if (chk && chk.data && chk.data.lots && chk.data.lots.length > 0) {
+                // Bulutda tovar bor ekan! Ustidan bo'sh yozmaymiz, aksincha tortib olamiz:
+                S = Object.assign(S, chk.data);
+                localStorage.setItem(KEY, JSON.stringify(S));
+                render();
+                _syncBusy = false;
+                return;
+            }
+        }
+
         S._ver = Date.now();
         _lastPushTime = S._ver;
 
@@ -2584,12 +2617,45 @@ async function _flushToCloud() {
                 updated_at: new Date().toISOString()
             }, { onConflict: 'shop_id' });
 
-        if (error) setTimeout(_flushToCloud, 2500);
+        // Ehtiyot zaxira qatori (417281_backup):
+        if (!error && S.lots && S.lots.length > 0) {
+            await supabaseClient.from('crm_state').upsert({
+                shop_id: targetShopId + "_backup",
+                data: S,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'shop_id' });
+        }
+
+        if (error) {
+            showSyncStatus("⚠️ Bazaga saqlanmadi! Internetni tekshiring", true);
+            setTimeout(_flushToCloud, 3000);
+        } else {
+            showSyncStatus("☁️ Bazaga saqlandi ✓", false);
+        }
     } catch (e) {
-        setTimeout(_flushToCloud, 2500);
+        showSyncStatus("⚠️ Internet uzildi! Qayta urinilmoqda...", true);
+        setTimeout(_flushToCloud, 3000);
     } finally {
         _syncBusy = false;
         if (_syncPending) _flushToCloud();
+    }
+}
+
+function showSyncStatus(msg, isErr) {
+    let el = document.getElementById("syncBadgeToast");
+    if (!el) {
+        el = document.createElement("div");
+        el.id = "syncBadgeToast";
+        el.style.cssText = "position:fixed;bottom:14px;right:14px;padding:8px 14px;border-radius:10px;font-weight:700;font-size:13px;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,0.4);transition:0.3s";
+        document.body.appendChild(el);
+    }
+    el.style.background = isErr ? "#ef4444" : "#10b981";
+    el.style.color = "#fff";
+    el.textContent = msg;
+    el.style.opacity = "1";
+    if (!isErr) {
+        clearTimeout(window._syncToastTimer);
+        window._syncToastTimer = setTimeout(() => { if (el) el.style.opacity = "0"; }, 2500);
     }
 }
 
