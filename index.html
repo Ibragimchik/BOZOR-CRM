@@ -914,6 +914,379 @@ const V = {
         return mainHtml;
     },
  
+buy() {
+        const sups = (S.sups || []).filter(x => x.type !== "cargo");
+        const cargos = (S.sups || []).filter(x => x.type === "cargo");
+        const whs = S.locs.filter(x => x.type === "wh");
+        const cartTot = Math.round(buyCart.reduce((a, c) => a + c.totCur, 0) * 100) / 100;
+        if (!buyPrefs.supId && sups.length) buyPrefs.supId = sups[0].id;
+
+        const allPartnerPays = [];
+        (S.sups || []).forEach(sp => {
+            (sp.payments || []).forEach(p => {
+                allPartnerPays.push({
+                    partnerId: sp.id, partnerName: sp.name, partnerType: sp.type,
+                    t: p.t, amtUZS: p.amtUZS, remUZS: p.remUZS !== undefined ? p.remUZS : (sp.debtUZS || 0), note: p.note || "-"
+                });
+            });
+        });
+        allPartnerPays.sort((a, b) => b.t - a.t);
+
+        let rightSideHtml = "";
+        const partner = activePartnerId ? (S.sups || []).find(x => x.id == activePartnerId) : null;
+
+        if (partner) {
+            const isCargo = partner.type === "cargo";
+            const partnerBatches = (S.batches || []).filter(b => {
+                if (!isCargo) return b.supId === partner.id;
+                return b.cargoId === partner.id || (b.lotIds || []).some(lid => { const l = L(lid); return l && l.cargoId === partner.id; });
+            }).slice().reverse();
+            const payments = (partner.payments || []).slice().reverse();
+
+            rightSideHtml = `<div class="c">
+                <h3>
+                    <span>${isCargo ? '🚚' : '🏭'} ${esc(partner.name)}</span>
+                    <button class="b b-sm b-out" onclick="activePartnerId=null;openBatchId=null;render()">⬅️ Orqaga</button>
+                </h3>
+                <div class="c" style="background:#0b1120;margin-bottom:12px;padding:12px">
+                    <div class="mu">Joriy qolgan qarzimiz:</div>
+                    <div class="big" style="color:${partner.debtUZS>0?'var(--bad)':'var(--ok)'}">${f(partner.debtUZS||0)} <small>${S.cur}</small></div>
+                    <div class="row" style="margin-top:10px;margin-bottom:0">
+                        <input id="inPayAmt" type="number" step="any" placeholder="Summa (${S.cur})">
+                        <input id="inPayNote" placeholder="Izoh (masalan: Naqd)">
+                        <button class="b b-ok" onclick="payInsidePartner('${partner.id}')">💸 Toʻlash</button>
+                    </div>
+                </div>
+
+                <h4>📅 ${isCargo ? 'Kargo orqali kelgan tovarlar' : 'Sotib olingan partiyalar'}</h4>
+                ${partnerBatches.length ? partnerBatches.map(b => {
+                    const isOpen = openBatchId === b.id;
+                    const batchLots = (b.lotIds || []).map(id => L(id)).filter(Boolean);
+                    const allArrived = batchLots.length > 0 && batchLots.every(l => l.status !== "transit");
+                    return `<div style="margin-bottom:10px">
+                        <button class="batch-btn" onclick="openBatchId=(openBatchId==='${b.id}'?null:'${b.id}');render()">
+                            <span>📅 <b>${tm(b.t)}</b> — ${batchLots.length} tovar (${b.totCur} ${b.cur})</span>
+                            <span class="badge ${allArrived?'badge-ok':'badge-tp'}">${allArrived ? '✅ Skladda' : '🚚 Yoʻlda'} ${isOpen ? '▲' : '▼'}</span>
+                        </button>
+                        ${isOpen ? `<div class="c" style="background:#0b1120;margin-top:-4px;border-color:var(--ac)">
+                            ${batchLots.map((l, idx) => {
+                                const isLotReady = l.status !== "transit";
+                                return `<div class="calc-box" style="border-color:${isLotReady?'var(--ok)':'var(--tp)'}">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+                                        <b>${idx + 1}. ${esc(l.name)} — Jami: ${tot(l)} dona</b>
+                                        <div style="display:flex;gap:6px">
+                                            <button class="b b-sm b-out" onclick="editPurchasedLot('${l.id}')">✏️ Tahrirlash</button>
+                                            <span class="badge ${isLotReady?'badge-ok':'badge-tp'}">${isLotReady ? '✅ Skladda' : '🚚 Yoʻlda'}</span>
+                                        </div>
+                                    </div>
+                                    ${!isLotReady ? `
+                                        <div class="row">
+                                            <label>Kargo (Majburiy emas)
+                                                <select id="lCg_${l.id}">
+                                                    <option value="">-- Kargo yo'q --</option>
+                                                    ${cargos.map(c=>`<option value="${c.id}" ${c.id===l.cargoId?'selected':''}>🚚 ${esc(c.name)}</option>`).join("")}
+                                                </select>
+                                            </label>
+                                            <label>Skladga?
+                                                <select id="lWh_${l.id}">${whs.map(w=>`<option value="${w.id}">🏭 ${esc(locTitle(w))}</option>`).join("")}</select>
+                                            </label>
+                                        </div>
+                                        <div class="row">
+                                            <label>Vazni (kg)<input id="lKg_${l.id}" type="number" step="any" placeholder="0 kg"></label>
+                                            <label>Valyuta
+                                                <select id="lCur_${l.id}">${["USD","CNY","KGS","UZS","RUB","KZT","TJS"].map(c=>`<option value="${c}" ${c===buyPrefs.cargoCur?"selected":""}>${c}</option>`).join("")}</select>
+                                            </label>
+                                            <label>Yoʻlkira summasi<input id="lCost_${l.id}" type="number" step="any" placeholder="Masalan: 45"></label>
+                                            <button class="b b-ok" onclick="receiveSingleLotCargo('${b.id}','${l.id}')">✅ Qabul qilish</button>
+                                        </div>
+                                    ` : `
+                                        <div class="mu">
+                                            🚚 Kargo: <b>${esc(l.cargoName || "-")}</b> | 💰 Yoʻlkira: <b>${l.cargoOrigTxt || (f(sum(l.exp,'amt')) + ' ' + S.cur)}</b> | 📌 1 dona: <b>${f(unit(l))} ${S.cur}</b>
+                                        </div>
+                                    `}
+                                </div>`;
+                            }).join("")}
+                        </div>` : ""}
+                    </div>`;
+                }).join("") : `<p class="mu">Hali partiyalar yoʻq.</p>`}
+
+                ${renderPaysArchive(payments, "🧾 Shu hamkorga toʻlangan pullar (Yil / Oy)")}
+            </div>`;
+        } else {
+            rightSideHtml = `<div class="c">
+                <h3>${tr("supTitle")}</h3>
+                <p class="mu" style="margin-top:-6px;margin-bottom:10px">💡 Magazin yoki Kargo nomining ustiga bossangiz ichidagi barcha chislolar va toʻlovlar ochiladi.</p>
+                <div class="row">
+                    <label style="flex:2">${tr("newPartner")}<input id="newSpNm" placeholder="Zavod yoki Kargo nomi..."></label>
+                    <label style="flex:1">${tr("type")}
+                        <select id="newSpTp"><option value="sup">🏭 Magazin / Zavod</option><option value="cargo">🚚 Kargo</option></select>
+                    </label>
+                    <button class="b" onclick="addPartner()">${tr("addBtn")}</button>
+                </div>
+
+                <h4 style="margin:12px 0 6px">🏭 Magazinlar / Zavodlar roʻyxati</h4>
+                <div class="tw"><table>
+                    <tr><th>#</th><th>Nomi (Bosing)</th><th>${tr("remDebt")}</th><th>Tezkor Toʻlov (${S.cur})</th><th></th></tr>
+                    ${sups.map((sp, idx) => `<tr>
+                        <td>${idx + 1}</td>
+                        <td><span class="partner-link" onclick="activePartnerId='${sp.id}';openBatchId=null;render()">🏭 ${esc(sp.name)} ➔</span></td>
+                        <td><b style="color:${sp.debtUZS>0?'var(--bad)':'var(--ok)'}">${f(sp.debtUZS||0)} ${S.cur}</b></td>
+                        <td>
+                            <div class="row" style="margin:0">
+                                <input id="spd_${sp.id}" type="number" step="any" placeholder="Summa" style="width:90px">
+                                <button class="b b-sm" onclick="payPartnerDebtById('${sp.id}')">To'lash</button>
+                            </div>
+                        </td>
+                        <td class="r"><button class="x" title="Oʻchirish" onclick="delPartner('${sp.id}')">🗑️</button></td>
+                    </tr>`).join("")}
+                </table></div>
+
+                <h4 style="margin:14px 0 6px">🚚 Kargolar roʻyxati</h4>
+                <div class="tw"><table>
+                    <tr><th>#</th><th>Nomi (Bosing)</th><th>${tr("remDebt")}</th><th>Tezkor Toʻlov (${S.cur})</th><th></th></tr>
+                    ${cargos.map((cg, idx) => `<tr>
+                        <td>${idx + 1}</td>
+                        <td><span class="partner-link" onclick="activePartnerId='${cg.id}';openBatchId=null;render()">🚚 ${esc(cg.name)} ➔</span></td>
+                        <td><b style="color:${cg.debtUZS>0?'var(--bad)':'var(--ok)'}">${f(cg.debtUZS||0)} ${S.cur}</b></td>
+                        <td>
+                            <div class="row" style="margin:0">
+                                <input id="spd_${cg.id}" type="number" step="any" placeholder="Summa" style="width:90px">
+                                <button class="b b-sm" onclick="payPartnerDebtById('${cg.id}')">To'lash</button>
+                            </div>
+                        </td>
+                        <td class="r"><button class="x" title="Oʻchirish" onclick="delPartner('${cg.id}')">🗑️</button></td>
+                    </tr>`).join("")}
+                </table></div>
+
+                ${renderPaysArchive(allPartnerPays, "Barcha Magazin va Kargolarga Toʻlangan Pullar (Yil / Oy)")}
+            </div>`;
+        }
+
+        const uniqueLotNames = Array.from(new Set(S.lots.map(l => (l.name || "").trim()).filter(Boolean)));
+
+        return `<div class="g2">
+            <div class="c">
+                <h3>${tr("impNew")}</h3>
+                <div class="row">
+                    <label style="width:100%">${tr("supName")} (Magazin)
+                        <select id="supSel" onchange="buyPrefs.supId=this.value;$('supNew').style.display=this.value==='new'?'block':'none'">
+                            ${sups.map(s=>`<option value="${s.id}" ${s.id==buyPrefs.supId?"selected":""}>🏭 ${esc(s.name)}</option>`).join("")}
+                            <option value="new">➕ ${tr("newPartner")}</option>
+                        </select>
+                        <input id="supNew" placeholder="Yangi magazin / zavod nomi..." style="display:none;margin-top:6px">
+                    </label>
+                </div>
+                <div class="row" style="margin-top:-6px;margin-bottom:10px">
+                    <label style="width:100%">🚚 Qaysi Kargodan keladi? (Majburiy emas)
+                        <select id="cgSelBuy" onchange="buyPrefs.cargoId=this.value;$('cgNewBuy').style.display=this.value==='new'?'block':'none'">
+                            <option value="">-- Hozircha tanlanmagan --</option>
+                            ${cargos.map(c=>`<option value="${c.id}" ${c.id==buyPrefs.cargoId?"selected":""}>🚚 ${esc(c.name)}</option>`).join("")}
+                            <option value="new">➕ Yangi Kargo nomi...</option>
+                        </select>
+                        <input id="cgNewBuy" placeholder="Yangi kargo nomi..." style="display:none;margin-top:6px">
+                    </label>
+                </div>
+
+                <div class="row">
+                    <label style="flex:2">${tr("prodName")} (Mavjud boʻlsa tanlang)
+                        <input id="nm" placeholder="Molten 4800..." list="buyExistLotsList" oninput="autofillBuyLot(this.value)">
+                        <datalist id="buyExistLotsList">${uniqueLotNames.map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
+                    </label>
+                    <label style="flex:1">${tr("barcode")}
+                        <div style="display:flex;gap:4px">
+                            <input id="bc" placeholder="8901...">
+                            <button type="button" class="b b-sm b-out" style="margin-top:3px" onclick="openScanner('bc')">📷</button>
+                        </div>
+                    </label>
+                </div>
+                <div id="buyMatchHint" class="mu" style="margin-top:-4px;margin-bottom:6px;color:var(--ok);font-weight:600;display:none"></div>
+
+                <label>${tr("prodImg")}<input type="file" accept="image/*" onchange="uploadBuyImg(this)"></label>
+
+                <div class="row">
+                    ${num("bxn",tr("boxCnt"),"0","","calcBuyTotalPcs()")}
+                    ${num("pc",tr("perBox"),"0","","calcBuyTotalPcs()")}
+                    ${num("bTotPcs","📌 Jami Dona (Aniq soni)","0","")}
+                </div>
+
+                <div class="calc-box">
+                    <div class="row">
+                        <label>${tr("buyCur")}
+                            <select id="bCur" onchange="saveBuyPrefs()">
+                                ${["USD","CNY","KGS","UZS","RUB","KZT","TJS"].map(c=>`<option value="${c}" ${c===buyPrefs.cur?"selected":""}>${c}</option>`).join("")}
+                            </select>
+                        </label>
+                        ${num("bUnitP",tr("buyPriceUnit"),"","")}
+                    </div>
+                </div>
+
+                <button class="b b-tp" style="width:100%;margin-top:8px" onclick="V.addItemToBuyCart()">➕ Roʻyxatga qoʻshish (Ketma-ketlik)</button>
+
+                <div style="margin:14px 0;max-height:240px;overflow-y:auto">
+                    ${buyCart.length ? `<table>
+                        <tr><th>№</th><th>Tovar</th><th>Dona</th><th class="r">Summa (${buyPrefs.cur})</th><th></th></tr>
+                        ${buyCart.map((it, idx) => `<tr>
+                            <td><b>${idx + 1}</b></td>
+                            <td><b>${esc(it.name)}</b></td>
+                            <td><b>${it.totalPcs} dona</b></td>
+                            <td class="r"><b>${it.totCur} ${it.cur}</b></td>
+                            <td class="r"><button class="x" onclick="buyCart.splice(${idx},1);render()">🗑️</button></td>
+                        </tr>`).join("")}
+                    </table>` : `<p class="mu" style="text-align:center;margin:10px 0">Roʻyxat boʻsh. Tepadan qoʻshing!</p>`}
+                </div>
+
+                <div class="c" style="background:#0b1120;margin:10px 0;padding:12px">
+                    <div class="mu">Jami summasi:</div>
+                    <div class="big" style="color:var(--tp)">${cartTot} <small>${buyPrefs.cur}</small></div>
+                </div>
+
+                <div class="row">
+                    ${num("mRet",tr("mrgRet"),"",buyPrefs.mRet,"saveBuyPrefs()")}
+                    ${num("mOpt",tr("mrgOpt"),"",buyPrefs.mOpt,"saveBuyPrefs()")}
+                    ${num("mBox",tr("mrgBox"),"",buyPrefs.mBox,"saveBuyPrefs()")}
+                </div>
+                <div class="row">
+                    ${num("om",tr("optMin"),"",buyPrefs.om,"saveBuyPrefs()")}
+                </div>
+
+                <button class="b b-ok" style="width:100%;margin-top:8px;padding:13px" onclick="V.saveWholeBuyBatch()">✅ Sotib oldim (Yoʻlda)</button>
+            </div>
+
+            <div>
+                ${rightSideHtml}
+            </div>
+        </div>`;
+    },
+    
+    addItemToBuyCart() {
+        saveBuyPrefs();
+        const nm = $("nm")?.value.trim();
+        const bx = val("bxn"), pc = val("pc");
+        let totPcs = val("bTotPcs");
+        if (totPcs <= 0 && bx > 0 && pc > 0) totPcs = bx * pc;
+        const pr = val("bUnitP");
+
+        if (!nm || totPcs <= 0 || pr <= 0) {
+            if (!nm && $("nm")) $("nm").classList.add("input-err");
+            if (totPcs <= 0) {
+                if ($("bxn")) $("bxn").classList.add("input-err");
+                if ($("bTotPcs")) $("bTotPcs").classList.add("input-err");
+            }
+            if (pr <= 0 && $("bUnitP")) $("bUnitP").classList.add("input-err");
+            return fail("Tovar nomi, jami dona (yoki karobka) va xarid narxini to'liq kiriting!");
+        }
+
+        const effectivePer = pc > 0 ? pc : totPcs;
+        const effectiveBx  = pc > 0 ? Math.floor(totPcs / pc) : 1;
+        const totCur = Math.round(totPcs * pr * 100) / 100;
+
+        // Agar buyCart ichida ham xuddi shu nomli tovar bo'lsa, birlashtiramiz:
+        const existInCart = buyCart.find(x => x.name.toLowerCase() === nm.toLowerCase() && x.buyUnitCur === pr);
+        if (existInCart) {
+            existInCart.totalPcs += totPcs;
+            existInCart.boxes = Math.floor(existInCart.totalPcs / (existInCart.per || 1));
+            existInCart.totCur = Math.round((existInCart.totCur + totCur) * 100) / 100;
+        } else {
+            buyCart.push({
+                name: nm, bc: $("bc")?.value.trim() || "", img: tmpBuyImg || "",
+                boxes: effectiveBx, per: effectivePer, totalPcs: totPcs, buyUnitCur: pr, totCur, cur: buyPrefs.cur
+            });
+        }
+
+        tmpBuyImg = "";
+        render();
+        setTimeout(() => { if ($("nm")) $("nm").focus(); }, 30);
+    },
+saveWholeBuyBatch() {
+        saveBuyPrefs();
+        if (!buyCart.length) return fail("Avval tovarlarni roʻyxatga qoʻshing!");
+
+        const cur = buyPrefs.cur;
+        const rt = S.rate[cur] || 1;
+
+        let supObj = null;
+        if ($("supSel").value === "new") {
+            const sName = $("supNew").value.trim() || "Zavod";
+            supObj = { id: uid(), name: sName, type: "sup", debtUZS: 0, payments: [] };
+            S.sups.push(supObj);
+            buyPrefs.supId = supObj.id;
+        } else supObj = S.sups.find(x => x.id == $("supSel").value);
+
+        let cgObj = null;
+        if ($("cgSelBuy") && $("cgSelBuy").value === "new") {
+            const cName = $("cgNewBuy").value.trim() || "Kargo";
+            cgObj = { id: uid(), name: cName, type: "cargo", debtUZS: 0, payments: [] };
+            S.sups.push(cgObj);
+            buyPrefs.cargoId = cgObj.id;
+        } else if ($("cgSelBuy") && $("cgSelBuy").value !== "") {
+            cgObj = S.sups.find(x => x.id == $("cgSelBuy").value);
+        }
+
+        let totalSupCur = 0;
+        buyCart.forEach(it => { totalSupCur += it.totCur; });
+        const totalSupUZS = totalSupCur * rt;
+
+        if (supObj && totalSupUZS > 0) supObj.debtUZS = (+supObj.debtUZS || 0) + totalSupUZS;
+
+        const mRet = buyPrefs.mRet;
+        const mOpt = buyPrefs.mOpt;
+        const mBox = buyPrefs.mBox;
+        const om   = buyPrefs.om;
+
+        const batchId = uid();
+        const lotIds = [];
+
+        buyCart.forEach(it => {
+            const lid = uid();
+            lotIds.push(lid);
+            const itemRt = S.rate[it.cur || cur] || rt;
+            const buyUZS = it.totCur * itemRt;
+            const totPcs = it.totalPcs || (it.boxes * it.per);
+            const unitCostUZS = buyUZS / Math.max(1, totPcs);
+            const pRet = Math.round(unitCostUZS * (1 + mRet / 100));
+            const pOpt = Math.round(unitCostUZS * (1 + mOpt / 100));
+            const pBox = Math.round(unitCostUZS * (1 + mBox / 100));
+
+            S.lots.push({
+                id: lid, batchId, status: "transit",
+                name: it.name, bc: it.bc, img: it.img,
+                supId: supObj ? supObj.id : "",
+                supName: supObj ? supObj.name : "", 
+                cargoId: cgObj ? cgObj.id : "", 
+                cargoName: cgObj ? cgObj.name : "",
+                kg: 0, initWh: "wh1",
+                boxes: it.boxes, per: it.per, extraPcs: totPcs % (it.per || 1), totalPcs: totPcs, buy: buyUZS,
+                mRet, mOpt, mBox,
+                exp: [],
+                pRet, pOpt, optMin: om, pBox, promo: 0
+            });
+        });
+
+        S.batches.push({
+            id: batchId,
+            supId: supObj ? supObj.id : "",
+            supName: supObj ? supObj.name : "",
+            t: Date.now(),
+            cur, rt,
+            totCur: Math.round(totalSupCur * 100) / 100,
+            totUZS: totalSupUZS,
+            status: "transit",
+            cargoId: cgObj ? cgObj.id : "", 
+            cargoName: cgObj ? cgObj.name : "", totalKg: 0, cargoCostUZS: 0,
+            lotIds,
+            items: buyCart.map(x => Object.assign({}, x))
+        });
+
+        buyCart = [];
+        if (supObj) {
+            activePartnerId = supObj.id;
+            openBatchId = batchId;
+        }
+        OK = "✅ Tovarlar «Sotib olindi»! Endi kargodan kelganda qabul qilsangiz ustiga qoʻshiladi.";
+        save(); render();
+    },
+
+
     trf() {
         const readyLots = S.lots.filter(l => l.status !== "transit");
         if (!window.mvFromId || !S.locs.some(x => x.id === window.mvFromId)) {
