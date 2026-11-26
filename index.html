@@ -1675,6 +1675,17 @@ const curSelectHtml = () => `<select onchange="setCur(this.value)">
     ${["UZS","KGS","USD","CNY","RUB","KZT","TJS"].map(c=>`<option value="${c}" ${S.cur===c?"selected":""}>${c}</option>`).join("")}
 </select>`;
 
+const getTabs = () => {
+    const waitCnt = (S.ord || []).filter(o => o.status !== "sent").length;
+    const ordBadge = waitCnt ? ` (${waitCnt})` : "";
+    return ({
+        boss: [["home",tr("home")],["buy",tr("buy")],["inv","🤝 Homiylar"],["trf",tr("trf")],["wh",tr("wh")],["mk",tr("mk")],["ord",tr("ord")+ordBadge],["cat",tr("cat")],["cash",tr("cash")],["debt",tr("debt")],["staff",tr("staff")],["sub",tr("sub")],["prof",tr("prof")]],
+        man:  [["inv","🤝 Homiylar"],["trf",tr("trf")],["wh",tr("wh")],["mk",tr("mk")],["ord",tr("ord")+ordBadge],["cat",tr("cat")],["cash",tr("cash")],["debt",tr("debt")],["staff","Xodimlar"],["prof",tr("prof")]],
+        sel:  [["mk",tr("mk")],["ord",tr("ord")+ordBadge],["cat",tr("cat")],["cash",tr("cash")],["debt",tr("debt")],["prof",tr("prof")]],
+        cust: [["cat",tr("cat")],["prof",tr("prof")]]
+    }[role] || [["cat",tr("cat")],["prof",tr("prof")]]);
+};
+
 function render() {
     if (!USER) { renderLogin(); return; }
     const tabs = getTabs();
